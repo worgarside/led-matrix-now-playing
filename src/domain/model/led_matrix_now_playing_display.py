@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from json import dumps, loads
 from logging import DEBUG, getLogger
+from socket import gethostname
 from time import sleep
 from typing import Any
 
@@ -48,6 +49,14 @@ CANVAS = MATRIX.CreateFrameCanvas()
 
 IMAGE_SIZE = 42
 
+NONE_VALUES = (
+    None,
+    "",
+    "None",
+    "none",
+    "null",
+)
+
 
 class LedMatrixNowPlayingDisplay:
     """Class for displaying track information on an RGB LED Matrix"""
@@ -75,14 +84,26 @@ class LedMatrixNowPlayingDisplay:
 
         LOGGER.debug("Received payload: %s", dumps(payload))
 
+        for k, v in payload.items():
+            if v in NONE_VALUES:
+                payload[k] = None
+
+        if (album_artwork_url := payload.get("album_artwork_url")) is not None:
+            artwork_image = ArtworkImage(
+                album=payload.get("album"),
+                artist=payload.get("artist"),
+                url=album_artwork_url,
+            )
+        else:
+            LOGGER.debug(
+                "No album artwork URL found in payload, defaulting to `NULL_IMAGE`"
+            )
+            artwork_image = NULL_IMAGE
+
         self.update_display_values(
             payload.get("title"),
             payload.get("artist"),
-            ArtworkImage(
-                album=payload.get("album"),
-                artist=payload.get("artist"),
-                url=payload.get("album_artwork_url"),
-            ),
+            artwork_image,
         )
 
     def start_loop(self) -> None:
@@ -93,8 +114,10 @@ class LedMatrixNowPlayingDisplay:
             MATRIX.Clear()
             CANVAS.SetImage(
                 self.artwork_image.get_image(
-                    IMAGE_SIZE, convert="RGB", delay_download=5
-                ),  # if geteuid() == 0 else 0),
+                    IMAGE_SIZE,
+                    convert="RGB",
+                    delay_download=5 if "pi" in gethostname() else 0,
+                ),
                 offset_x=self.artwork_x_y_offset,
                 offset_y=(self.artwork_x_y_offset / 2) - 3,
             )
