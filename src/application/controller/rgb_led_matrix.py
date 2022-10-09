@@ -6,12 +6,19 @@ from pathlib import Path
 from sys import path
 
 from dotenv import load_dotenv
+from paho.mqtt.publish import single
 from wg_utilities.loggers import add_stream_handler
 
 path.append(str(Path(__file__).parents[2]))
 
 # pylint: disable=wrong-import-position
-from application.handler.mqtt import HA_LED_MATRIX_PAYLOAD_TOPIC, MQTT_CLIENT
+from application.handler.mqtt import (
+    HA_LED_MATRIX_PAYLOAD_TOPIC,
+    MQTT_CLIENT,
+    MQTT_HOST,
+    MQTT_PASSWORD,
+    MQTT_USERNAME,
+)
 from domain.model.led_matrix_now_playing_display import LedMatrixNowPlayingDisplay
 
 load_dotenv()
@@ -30,6 +37,12 @@ def main() -> None:
     MQTT_CLIENT.on_message = led_matrix.handle_mqtt_message
 
     MQTT_CLIENT.loop_start()
+    single(
+        topic="/home-assistant/script/crt_pi_update_display/run",
+        payload=True,
+        auth={"username": MQTT_USERNAME, "password": MQTT_PASSWORD},
+        hostname=MQTT_HOST,
+    )
     led_matrix.start_loop()
 
 
