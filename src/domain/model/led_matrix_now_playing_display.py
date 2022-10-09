@@ -36,7 +36,7 @@ except ImportError as exc:
 OPTIONS = RGBMatrixOptions()
 OPTIONS.cols = 64
 OPTIONS.rows = 64
-OPTIONS.brightness = 50
+OPTIONS.brightness = 25
 OPTIONS.gpio_slowdown = 0
 OPTIONS.hardware_mapping = "adafruit-hat"
 OPTIONS.inverse_colors = False
@@ -46,7 +46,7 @@ OPTIONS.show_refresh_rate = False
 MATRIX = RGBMatrix(options=OPTIONS)
 CANVAS = MATRIX.CreateFrameCanvas()
 
-IMAGE_SIZE = 40
+IMAGE_SIZE = 42
 
 
 class LedMatrixNowPlayingDisplay:
@@ -90,29 +90,30 @@ class LedMatrixNowPlayingDisplay:
         self.loop_active = True
 
         while self.loop_active:
-            LOGGER.info("LOOPING")
             MATRIX.Clear()
             CANVAS.SetImage(
-                self.artwork_image.get_image(IMAGE_SIZE, convert="RGB"),
+                self.artwork_image.get_image(
+                    IMAGE_SIZE, convert="RGB", delay_download=5
+                ),  # if geteuid() == 0 else 0),
                 offset_x=self.artwork_x_y_offset,
                 offset_y=(self.artwork_x_y_offset / 2) - 3,
             )
 
             DrawText(
-                canvas=CANVAS,
-                font=FONT,
-                x=self.media_title.get_next_x_pos(),
-                y=self.media_title.y_pos,
-                color=self.media_title.color,
-                text=self.media_title.content,
+                CANVAS,
+                FONT,
+                self.media_title.get_next_x_pos(),
+                self.media_title.y_pos,
+                self.media_title.color,
+                self.media_title.content,
             )
             DrawText(
-                canvas=CANVAS,
-                font=FONT,
-                x=self.artist.get_next_x_pos(),
-                y=self.artist.y_pos,
-                color=self.artist.color,
-                text=self.artist.content,
+                CANVAS,
+                FONT,
+                self.artist.get_next_x_pos(),
+                self.artist.y_pos,
+                self.artist.color,
+                self.artist.content,
             )
 
             MATRIX.SwapOnVSync(CANVAS)
@@ -123,9 +124,10 @@ class LedMatrixNowPlayingDisplay:
                 current_media_title_content = self.media_title.content
                 current_artist_content = self.artist.content
                 while (
-                    (not self.media_title.scrollable and not self.artist.scrollable)
-                    or self.media_title.content != current_media_title_content
-                    or self.artist.content != current_artist_content
+                    not self.media_title.scrollable
+                    and not self.artist.scrollable
+                    and self.media_title.content == current_media_title_content
+                    and self.artist.content == current_artist_content
                 ):
                     sleep(0.1)
 
@@ -142,6 +144,7 @@ class LedMatrixNowPlayingDisplay:
             artist (str, optional): the artist of the media
             artwork_image (ArtworkImage, optional): the artwork image of the media
         """
+        LOGGER.debug("Updating display values: %s, %s", title, artist)
 
         self.media_title.content = title or ""
         self.artist.content = artist or ""

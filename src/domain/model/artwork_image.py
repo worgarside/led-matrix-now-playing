@@ -1,17 +1,29 @@
 """Class for the creation, caching, and management of artwork images"""
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from io import BytesIO
+from json import dumps
 from logging import DEBUG, getLogger
+from os import geteuid
 from os.path import exists, isdir, isfile, join
 from pathlib import Path
 from re import compile as compile_regex
+from time import sleep
 
+from paho.mqtt.publish import single
 from PIL.Image import Image, Resampling
 from PIL.Image import open as open_image
 from requests import get
 from wg_utilities.functions import force_mkdir
 from wg_utilities.loggers import add_stream_handler
+
+from application.handler.mqtt import (
+    HA_LED_MATRIX_ARTWORK_CACHE_TOPIC,
+    MQTT_HOST,
+    MQTT_PASSWORD,
+    MQTT_USERNAME,
+)
 
 LOGGER = getLogger(__name__)
 LOGGER.setLevel(DEBUG)
@@ -28,8 +40,12 @@ class ArtworkImage:
 
     def __init__(self, album: str, artist: str, url: str) -> None:
         if not isdir(self.ARTWORK_DIR):
-            # run_cmd(f"sudo mkdir {self.ARTWORK_DIR}")
-            force_mkdir(self.ARTWORK_DIR)
+            if geteuid() == 0:
+                LOGGER.warning(
+                    "Not creating artwork directory, because script is running as root"
+                )
+            else:
+                force_mkdir(self.ARTWORK_DIR)
 
         self.album = album
         self.artist = artist or "unknown"
@@ -40,9 +56,13 @@ class ArtworkImage:
     def download(self) -> None:
         """Download the image from the URL to store it locally for future use"""
 
-        # if not isdir(self.ARTWORK_DIR / self.artist_directory):
-        #     # run_cmd(f"sudo mkdir {str(self.ARTWORK_DIR / self.artist_directory)}")
-        #     force_mkdir(self.ARTWORK_DIR / self.artist_directory)
+        if not isdir(self.ARTWORK_DIR / self.artist_directory):
+            if geteuid() == 0:
+                LOGGER.warning(
+                    "Not creating artist directory, because script is running as root"
+                )
+            else:
+                force_mkdir(self.ARTWORK_DIR / self.artist_directory)
 
         if isfile(self.url):
             LOGGER.debug("Opening local image: %s", self.url)
@@ -57,12 +77,21 @@ class ArtworkImage:
 
         LOGGER.info("New image saved at %s", self.file_path)
 
-    def get_image(self, size: int | None = None, convert: str | None = None) -> Image:
+    def get_image(
+        self,
+        size: int | None = None,
+        convert: str | None = None,
+        delay_download: int = 0,
+    ) -> Image:
         """Returns the image as a PIL Image object, with optional resizing
 
         Args:
             size (int): integer value to use as height and width of artwork, in pixels
             convert (str): optional color conversion to apply to the image
+            delay_download (int): optional delay in seconds to wait before "force
+                downloading" the image by (re)sending the payload to the artwork cache
+                topic, allowing the `artwork_cache` application to download the file
+                instead
 
         Returns:
             Image: PIL Image object of artwork
@@ -73,8 +102,46 @@ class ArtworkImage:
 
         LOGGER.debug("Getting image with size %i", size)
 
-        if not exists(self.file_path):
-            self.download()
+        if not delay_download:
+            if not exists(self.file_path):
+                self.download()
+        else:
+            stop_time = datetime.now() + timedelta(seconds=delay_download)
+
+            LOGGER.debug("Waiting up to %i seconds before downloading", delay_download)
+
+            while not exists(self.file_path) and datetime.now() < stop_time:
+                sleep(0.1)
+
+            LOGGER.debug(
+                "Finished first sleep, image file exists: %s", exists(self.file_path)
+            )
+
+            if not exists(self.file_path):
+                LOGGER.error(
+                    "Image still not found at %s, sending payload to cache topic",
+                    self.file_path,
+                )
+                payload = dumps(
+                    {
+                        "artist": self.artist,
+                        "album": self.album,
+                        "album_artwork_url": self.url,
+                    }
+                )
+
+                LOGGER.debug("Payload: %s", payload)
+
+                single(
+                    topic=HA_LED_MATRIX_ARTWORK_CACHE_TOPIC,
+                    payload=payload,
+                    auth={"username": MQTT_USERNAME, "password": MQTT_PASSWORD},
+                    hostname=MQTT_HOST,
+                )
+
+                stop_time = datetime.now() + timedelta(seconds=delay_download)
+                while not exists(self.file_path) and datetime.now() < stop_time:
+                    sleep(0.1)
 
         with open(self.file_path, "rb") as fin:
             tk_img: Image = open_image(BytesIO(fin.read()))
@@ -86,6 +153,8 @@ class ArtworkImage:
             tk_img = tk_img.convert(convert)
 
         self._tk_img_cache.setdefault(size, {})[convert] = tk_img
+
+        LOGGER.debug("Returning image from path %s", self.file_path)
 
         return tk_img
 
@@ -115,8 +184,10 @@ class ArtworkImage:
         Returns:
             str: fully-qualified path to the artwork image
         """
-        # return join(self.ARTWORK_DIR, self.artist_directory, self.filename)
-        return join(self.ARTWORK_DIR, self.filename)
+        return join(self.ARTWORK_DIR, self.artist_directory, self.filename)
+
+    def __hash__(self) -> int:
+        return hash((self.artist, self.album, self.url))
 
     def __str__(self) -> str:
         """Returns the string representation of the object"""

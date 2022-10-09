@@ -19,12 +19,13 @@ add_stream_handler(LOGGER)
 
 
 MQTT_CLIENT = Client()
-MQTT_CLIENT.username_pw_set(
-    username=getenv("MQTT_USERNAME"), password=getenv("MQTT_PASSWORD")
-)
-
+MQTT_USERNAME = getenv("MQTT_USERNAME")
+MQTT_PASSWORD = getenv("MQTT_PASSWORD")
+MQTT_CLIENT.username_pw_set(username=MQTT_USERNAME, password=MQTT_PASSWORD)
 MQTT_HOST = getenv("MQTT_HOST", "homeassistant.local")
-HA_LED_MATRIX_PAYLOAD_TOPIC = "/homeassistant/led_matrix/payload"
+
+HA_LED_MATRIX_PAYLOAD_TOPIC = "/homeassistant/led_matrix/display"
+HA_LED_MATRIX_ARTWORK_CACHE_TOPIC = "/homeassistant/led_matrix/artwork_cache"
 
 
 @on_exception()  # type: ignore[misc]

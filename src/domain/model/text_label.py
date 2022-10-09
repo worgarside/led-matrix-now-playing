@@ -19,8 +19,8 @@ except ImportError as exc:
 
     from RGBMatrixEmulator.graphics import Color, Font
 
-FONT_WIDTH = 5
-FONT_HEIGHT = 7
+FONT_WIDTH = 4
+FONT_HEIGHT = 6
 SCROLL_INCREMENT_DISTANCE = 2 * FONT_WIDTH
 FONT = Font()
 FONT.LoadFont(

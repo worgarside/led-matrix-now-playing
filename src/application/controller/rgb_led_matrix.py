@@ -8,12 +8,10 @@ from sys import path
 from dotenv import load_dotenv
 from wg_utilities.loggers import add_stream_handler
 
-from application.handler.mqtt import HA_LED_MATRIX_PAYLOAD_TOPIC, MQTT_CLIENT
-
-path.append(str(Path(__file__).parent.parent))
+path.append(str(Path(__file__).parents[2]))
 
 # pylint: disable=wrong-import-position
-
+from application.handler.mqtt import HA_LED_MATRIX_PAYLOAD_TOPIC, MQTT_CLIENT
 from domain.model.led_matrix_now_playing_display import LedMatrixNowPlayingDisplay
 
 load_dotenv()
@@ -27,11 +25,11 @@ def main() -> None:
     """Connect and subscribe the MQTT client and initialize the display"""
 
     MQTT_CLIENT.subscribe(HA_LED_MATRIX_PAYLOAD_TOPIC)
-    MQTT_CLIENT.loop_start()
 
     led_matrix = LedMatrixNowPlayingDisplay()
-
     MQTT_CLIENT.on_message = led_matrix.handle_mqtt_message
+
+    MQTT_CLIENT.loop_start()
     led_matrix.start_loop()
 
 
