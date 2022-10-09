@@ -36,7 +36,8 @@ FONT.LoadFont(
 class Text:
     """Class for displaying text on the matrix"""
 
-    DEFAULT_TEXT_COLOR = Color(255, 255, 255)
+    DEFAULT_TEXT_COLOR = Color(255, 255, 255)  # white
+    CLEAR_TEXT_COLOR = Color()  # black
 
     def __init__(
         self,
@@ -49,7 +50,7 @@ class Text:
         self.color = color or self.DEFAULT_TEXT_COLOR
         self.y_pos = y_pos
 
-        self._original_content = content
+        self.original_content = content
         self._matrix_width = matrix_width
         self.scrollable: bool = False
 
@@ -91,30 +92,30 @@ class Text:
         self._current_x_pos = self.original_x_pos
 
     @property
-    def content(self) -> str:
+    def display_content(self) -> str:
         """
         Returns:
-            str: the content of the text
+            str: the display_content of the text
         """
         if self.scrollable:
-            return ("   " + self._original_content + "   ") * 3
+            return ("   " + self.original_content + "   ") * 3
 
-        return self._original_content
+        return self.original_content
 
-    @content.setter
-    def content(self, value: str) -> None:
-        """Sets the content of the text
+    @display_content.setter
+    def display_content(self, value: str) -> None:
+        """Sets the display_content of the text
 
         Args:
-            value (str): the new content
+            value (str): the new display_content
         """
 
-        self._original_content = value
+        self.original_content = value
 
         if self.matrix_width:
-            # Set the `scrollable` attribute based on the new content's length
+            # Set the `scrollable` attribute based on the new display_content's length
             self.scrollable = (
-                len(self._original_content) * FONT_WIDTH > self.matrix_width
+                len(self.original_content) * FONT_WIDTH > self.matrix_width
             )
         else:
             LOGGER.warning("Matrix width not set, defaulting scrollable to False")
@@ -127,7 +128,7 @@ class Text:
             int: length of the text in pixels
         """
 
-        return len(self.content) * FONT_WIDTH
+        return len(self.display_content) * FONT_WIDTH
 
     @property
     def matrix_width(self) -> int | None:
@@ -167,7 +168,7 @@ class Text:
             return 10
 
         # Otherwise center the text on the screen
-        return int((self.matrix_width - (len(self._original_content) * FONT_WIDTH)) / 2)
+        return int((self.matrix_width - (len(self.original_content) * FONT_WIDTH)) / 2)
 
     def __len__(self) -> int:
         """
@@ -175,4 +176,4 @@ class Text:
             int: the length of the text
         """
 
-        return len(self.content)
+        return len(self.display_content)

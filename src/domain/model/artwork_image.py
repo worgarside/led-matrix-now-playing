@@ -51,8 +51,6 @@ class ArtworkImage:
         self.artist = artist or "unknown"
         self.url = url
 
-        self._tk_img_cache: dict[int | None, dict[str | None, Image]] = {}
-
     def download(self) -> None:
         """Download the image from the URL to store it locally for future use"""
 
@@ -97,12 +95,8 @@ class ArtworkImage:
             Image: PIL Image object of artwork
         """
 
-        if (cached_image := self._tk_img_cache.get(size, {}).get(convert)) is not None:
-            return cached_image
-
-        LOGGER.debug("Getting image with size %i", size)
-
         if not delay_download:
+            LOGGER.debug("No delay_download, downloading if file doesn't exist")
             if not exists(self.file_path):
                 self.download()
         else:
@@ -146,13 +140,11 @@ class ArtworkImage:
         with open(self.file_path, "rb") as fin:
             tk_img: Image = open_image(BytesIO(fin.read()))
 
-        if size is not None:
+        if size:
             tk_img = tk_img.resize((size, size), Resampling.LANCZOS)
 
         if convert:
             tk_img = tk_img.convert(convert)
-
-        self._tk_img_cache.setdefault(size, {})[convert] = tk_img
 
         LOGGER.debug("Returning image from path %s", self.file_path)
 

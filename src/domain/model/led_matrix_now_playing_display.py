@@ -13,7 +13,7 @@ from paho.mqtt.client import MQTTMessage
 from wg_utilities.loggers import add_stream_handler
 
 from domain.model.artwork_image import NULL_IMAGE, ArtworkImage
-from domain.model.text_label import FONT, Text
+from domain.model.text_label import FONT, FONT_WIDTH, Text
 
 load_dotenv()
 
@@ -37,7 +37,7 @@ except ImportError as exc:
 OPTIONS = RGBMatrixOptions()
 OPTIONS.cols = 64
 OPTIONS.rows = 64
-OPTIONS.brightness = 25
+OPTIONS.brightness = 100
 OPTIONS.gpio_slowdown = 0
 OPTIONS.hardware_mapping = "adafruit-hat"
 OPTIONS.inverse_colors = False
@@ -66,12 +66,52 @@ class LedMatrixNowPlayingDisplay:
 
     def __init__(self) -> None:
         self.media_title = Text("", self.MEDIA_TITLE_Y_POS, matrix_width=MATRIX.width)
+        self._next_media_title_content = self.media_title.display_content
         self.artist = Text("", self.ARTIST_Y_POS, matrix_width=MATRIX.width)
+        self._next_artist_content = self.artist.display_content
 
         self.artwork_image = NULL_IMAGE
+        self._next_artwork_image = NULL_IMAGE
         self.artwork_x_y_offset = (MATRIX.width - IMAGE_SIZE) / 2
 
         self.loop_active = False
+
+    def _clear_text(self, text: Text, update_canvas: bool = False) -> None:
+        """Clears a lines of text on the canvas
+
+        Args:
+            text (str): the text instance to clear
+            update_canvas (bool, optional): whether to update the canvas after clearing
+                the text. Defaults to False.
+        """
+        DrawText(
+            CANVAS,
+            FONT,
+            0,
+            text.y_pos,
+            text.CLEAR_TEXT_COLOR,
+            "█" * int(MATRIX.width / FONT_WIDTH),
+        )
+        if update_canvas:
+            MATRIX.SwapOnVSync(CANVAS)
+
+    def clear_artist(self, update_canvas: bool = False) -> None:
+        """Clears the artist text
+
+        Args:
+            update_canvas (bool, optional): whether to update the canvas after clearing
+                the text. Defaults to False.
+        """
+        self._clear_text(self.artist, update_canvas)
+
+    def clear_media_title(self, update_canvas: bool = False) -> None:
+        """Clears the media title text
+
+        Args:
+            update_canvas (bool, optional): whether to update the canvas after clearing
+                the text. Defaults to False.
+        """
+        self._clear_text(self.media_title, update_canvas)
 
     def handle_mqtt_message(self, _: Any, __: Any, message: MQTTMessage) -> None:
         """Handles an MQTT message
@@ -107,20 +147,40 @@ class LedMatrixNowPlayingDisplay:
         )
 
     def start_loop(self) -> None:
-        """Starts the loop for displaying the track information"""
+        """Starts the loop for displaying the track information
+
+        Instead of using `MATRIX.Clear()` to clear the canvas, I "clear" the text by
+        overwriting it with a string of black "█" characters, then write the
+        new/scrolled text in place. This stops me from having to re-display the artwork
+        and any unchanged text on each loop, and instead I only update the bits I need
+        to!
+        """
         self.loop_active = True
 
         while self.loop_active:
-            MATRIX.Clear()
-            CANVAS.SetImage(
-                self.artwork_image.get_image(
-                    IMAGE_SIZE,
-                    convert="RGB",
-                    delay_download=5 if "pi" in gethostname() else 0,
-                ),
-                offset_x=self.artwork_x_y_offset,
-                offset_y=(self.artwork_x_y_offset / 2) - 3,
-            )
+            if self._next_artwork_image != self.artwork_image:
+                LOGGER.debug(
+                    "Updating artwork image from %s to %s",
+                    self.artwork_image,
+                    self._next_artwork_image,
+                )
+
+                self.artwork_image = self._next_artwork_image
+                CANVAS.SetImage(
+                    self.artwork_image.get_image(
+                        IMAGE_SIZE,
+                        convert="RGB",
+                        delay_download=5 if "pi" in gethostname() else 0,
+                    ),
+                    offset_x=self.artwork_x_y_offset,
+                    offset_y=(self.artwork_x_y_offset / 2) - 3,
+                )
+
+            if media_title_scrollable := self.media_title.scrollable:
+                self.clear_media_title()
+
+            if artist_scrollable := self.artist.scrollable:
+                self.clear_artist()
 
             DrawText(
                 CANVAS,
@@ -128,31 +188,51 @@ class LedMatrixNowPlayingDisplay:
                 self.media_title.get_next_x_pos(),
                 self.media_title.y_pos,
                 self.media_title.color,
-                self.media_title.content,
+                self.media_title.display_content,
             )
+
             DrawText(
                 CANVAS,
                 FONT,
                 self.artist.get_next_x_pos(),
                 self.artist.y_pos,
                 self.artist.color,
-                self.artist.content,
+                self.artist.display_content,
             )
 
             MATRIX.SwapOnVSync(CANVAS)
 
-            if self.media_title.scrollable or self.artist.scrollable:
+            if media_title_scrollable or artist_scrollable:
+                # Wait 0.5s to refresh the screen
                 sleep(0.5)
             else:
-                current_media_title_content = self.media_title.content
-                current_artist_content = self.artist.content
+                # Wait until there's a change, no point refreshing the display if
+                # nothing has changed
                 while (
-                    not self.media_title.scrollable
-                    and not self.artist.scrollable
-                    and self.media_title.content == current_media_title_content
-                    and self.artist.content == current_artist_content
+                    self._next_media_title_content == self.media_title.display_content
+                    and self._next_artist_content == self.artist.display_content
+                    and self._next_artwork_image == self.artwork_image
+                    and self.loop_active
                 ):
                     sleep(0.1)
+
+            if self._next_media_title_content != self.media_title.original_content:
+                LOGGER.debug(
+                    "Updating media title from `%s` to `%s`",
+                    self.media_title.display_content,
+                    self._next_media_title_content,
+                )
+                self.clear_media_title()
+                self.media_title.display_content = self._next_media_title_content
+
+            if self._next_artist_content != self.artist.original_content:
+                LOGGER.debug(
+                    "Updating artist from `%s` to `%s`",
+                    self.artist.display_content,
+                    self._next_artist_content,
+                )
+                self.clear_artist()
+                self.artist.display_content = self._next_artist_content
 
     def update_display_values(
         self,
@@ -169,10 +249,9 @@ class LedMatrixNowPlayingDisplay:
         """
         LOGGER.debug("Updating display values: %s, %s", title, artist)
 
-        self.media_title.content = title or ""
-        self.artist.content = artist or ""
-
-        self.artwork_image = artwork_image or NULL_IMAGE
+        self._next_media_title_content = title or ""
+        self._next_artist_content = artist or ""
+        self._next_artwork_image = artwork_image or NULL_IMAGE
 
         self.media_title.reset_x_pos()
         self.artist.reset_x_pos()
