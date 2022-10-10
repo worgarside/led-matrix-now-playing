@@ -1,0 +1,15 @@
+[Unit]
+Description=LED Matrix Display Service
+After=multi-user.target
+StartLimitBurst=10
+StartLimitIntervalSec=10
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+User=root
+ExecStart=/usr/bin/sudo /usr/bin/python /home/pi/led-matrix-now-playing/src/application/controller/rgb_led_matrix.py
+
+[Install]
+WantedBy=multi-user.target

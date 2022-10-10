@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from json import dumps, loads
 from logging import DEBUG, getLogger
+from math import ceil
 from socket import gethostname
 from time import sleep
 from typing import Any
@@ -13,7 +14,7 @@ from paho.mqtt.client import MQTTMessage
 from wg_utilities.loggers import add_stream_handler
 
 from domain.model.artwork_image import NULL_IMAGE, ArtworkImage
-from domain.model.text_label import FONT, FONT_WIDTH, Text
+from domain.model.text_label import FONT, FONT_HEIGHT, FONT_WIDTH, Text
 
 load_dotenv()
 
@@ -47,7 +48,6 @@ OPTIONS.show_refresh_rate = False
 MATRIX = RGBMatrix(options=OPTIONS)
 CANVAS = MATRIX.CreateFrameCanvas()
 
-IMAGE_SIZE = 42
 
 NONE_VALUES = (
     None,
@@ -61,23 +61,27 @@ NONE_VALUES = (
 class LedMatrixNowPlayingDisplay:
     """Class for displaying track information on an RGB LED Matrix"""
 
-    MEDIA_TITLE_Y_POS = 52
-    ARTIST_Y_POS = 62
-
     def __init__(self) -> None:
-        self.media_title = Text("", self.MEDIA_TITLE_Y_POS, matrix_width=MATRIX.width)
+        artist_y_pos = MATRIX.height - 2
+        media_title_y_pos = artist_y_pos - (FONT_HEIGHT + 1)
+
+        self.image_size = media_title_y_pos - (FONT_HEIGHT + 3)
+        self.image_x_pos = (MATRIX.width - self.image_size) / 2
+        self.image_y_pos = (MATRIX.height - (FONT_HEIGHT * 2 + 2) - self.image_size) / 2
+
+        self.media_title = Text("", media_title_y_pos, matrix_width=MATRIX.width)
         self._next_media_title_content = self.media_title.display_content
-        self.artist = Text("", self.ARTIST_Y_POS, matrix_width=MATRIX.width)
+        self.artist = Text("", artist_y_pos, matrix_width=MATRIX.width)
         self._next_artist_content = self.artist.display_content
 
         self.artwork_image = NULL_IMAGE
         self._next_artwork_image = NULL_IMAGE
-        self.artwork_x_y_offset = (MATRIX.width - IMAGE_SIZE) / 2
 
         self.loop_active = False
 
-    def _clear_text(self, text: Text, update_canvas: bool = False) -> None:
-        """Clears a lines of text on the canvas
+    @staticmethod
+    def _clear_text(text: Text, update_canvas: bool = False) -> None:
+        """Clears a lines of text on the canvas by writing a line of "█" characters
 
         Args:
             text (str): the text instance to clear
@@ -90,7 +94,7 @@ class LedMatrixNowPlayingDisplay:
             0,
             text.y_pos,
             text.CLEAR_TEXT_COLOR,
-            "█" * int(MATRIX.width / FONT_WIDTH),
+            "█" * ceil(MATRIX.width / FONT_WIDTH),
         )
         if update_canvas:
             MATRIX.SwapOnVSync(CANVAS)
@@ -168,12 +172,12 @@ class LedMatrixNowPlayingDisplay:
                 self.artwork_image = self._next_artwork_image
                 CANVAS.SetImage(
                     self.artwork_image.get_image(
-                        IMAGE_SIZE,
+                        self.image_size,
                         convert="RGB",
                         delay_download=5 if "pi" in gethostname() else 0,
                     ),
-                    offset_x=self.artwork_x_y_offset,
-                    offset_y=(self.artwork_x_y_offset / 2) - 3,
+                    offset_x=self.image_x_pos,
+                    offset_y=self.image_y_pos,
                 )
 
             if media_title_scrollable := self.media_title.scrollable:

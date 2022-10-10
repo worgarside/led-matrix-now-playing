@@ -1,0 +1,15 @@
+[Unit]
+Description=Artwork Caching Service
+After=multi-user.target
+StartLimitBurst=10
+StartLimitIntervalSec=10
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+User=pi
+ExecStart=/home/pi/.pyenv/shims/python /home/pi/led-matrix-now-playing/src/application/controller/artwork_cache.py
+
+[Install]
+WantedBy=multi-user.target
