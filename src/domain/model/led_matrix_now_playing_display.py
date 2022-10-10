@@ -5,7 +5,6 @@ from __future__ import annotations
 from json import dumps, loads
 from logging import DEBUG, getLogger
 from math import ceil
-from socket import gethostname
 from time import sleep
 from typing import Any
 
@@ -174,7 +173,6 @@ class LedMatrixNowPlayingDisplay:
                     self.artwork_image.get_image(
                         self.image_size,
                         convert="RGB",
-                        delay_download=5 if "pi" in gethostname() else 0,
                     ),
                     offset_x=self.image_x_pos,
                     offset_y=self.image_y_pos,
