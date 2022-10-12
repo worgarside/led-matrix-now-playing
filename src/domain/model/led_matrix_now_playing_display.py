@@ -6,7 +6,7 @@ from json import dumps, loads
 from logging import DEBUG, getLogger
 from math import ceil
 from time import sleep
-from typing import Any
+from typing import Literal, TypedDict
 
 from dotenv import load_dotenv
 from paho.mqtt.client import MQTTMessage
@@ -34,20 +34,6 @@ except ImportError as exc:
     from RGBMatrixEmulator.graphics import DrawText
 
 
-OPTIONS = RGBMatrixOptions()
-OPTIONS.cols = 64
-OPTIONS.rows = 64
-OPTIONS.brightness = 100
-OPTIONS.gpio_slowdown = 0
-OPTIONS.hardware_mapping = "adafruit-hat"
-OPTIONS.inverse_colors = False
-OPTIONS.led_rgb_sequence = "RGB"
-OPTIONS.show_refresh_rate = False
-
-MATRIX = RGBMatrix(options=OPTIONS)
-CANVAS = MATRIX.CreateFrameCanvas()
-
-
 NONE_VALUES = (
     None,
     "",
@@ -57,29 +43,66 @@ NONE_VALUES = (
 )
 
 
+class LedMatrixOptionsInfo(TypedDict):
+    """Typing info for the matrix options"""
+
+    cols: int
+    rows: int
+    brightness: int
+    gpio_slowdown: int
+    hardware_mapping: Literal["adafruit-hat"]
+    inverse_colors: bool
+    led_rgb_sequence: Literal["RGB"]
+    show_refresh_rate: bool
+
+
 class LedMatrixNowPlayingDisplay:
     """Class for displaying track information on an RGB LED Matrix"""
 
-    def __init__(self) -> None:
-        artist_y_pos = MATRIX.height - 2
+    OPTIONS: LedMatrixOptionsInfo = {
+        "cols": 64,
+        "rows": 64,
+        "brightness": 80,
+        "gpio_slowdown": 0,
+        "hardware_mapping": "adafruit-hat",
+        "inverse_colors": False,
+        "led_rgb_sequence": "RGB",
+        "show_refresh_rate": False,
+    }
+
+    def __init__(self, brightness: int | None = None) -> None:
+        options = RGBMatrixOptions()
+        for k, v in self.OPTIONS.items():
+            if k == "brightness" and brightness:
+                options.brightness = brightness
+                continue
+            setattr(options, k, v)
+
+        self.matrix = RGBMatrix(options=options)
+        self.canvas = self.matrix.CreateFrameCanvas()
+
+        artist_y_pos = self.matrix.height - 2
         media_title_y_pos = artist_y_pos - (FONT_HEIGHT + 1)
 
         self.image_size = media_title_y_pos - (FONT_HEIGHT + 3)
-        self.image_x_pos = (MATRIX.width - self.image_size) / 2
-        self.image_y_pos = (MATRIX.height - (FONT_HEIGHT * 2 + 2) - self.image_size) / 2
+        self.image_x_pos = (self.matrix.width - self.image_size) / 2
+        self.image_y_pos = (
+            self.matrix.height - (FONT_HEIGHT * 2 + 2) - self.image_size
+        ) / 2
 
-        self.media_title = Text("", media_title_y_pos, matrix_width=MATRIX.width)
+        self.media_title = Text("", media_title_y_pos, matrix_width=self.matrix.width)
         self._next_media_title_content = self.media_title.display_content
-        self.artist = Text("", artist_y_pos, matrix_width=MATRIX.width)
+        self.artist = Text("", artist_y_pos, matrix_width=self.matrix.width)
         self._next_artist_content = self.artist.display_content
 
         self.artwork_image = NULL_IMAGE
         self._next_artwork_image = NULL_IMAGE
 
+        self._brightness: int = brightness or self.OPTIONS["brightness"]
+
         self.loop_active = False
 
-    @staticmethod
-    def _clear_text(text: Text, update_canvas: bool = False) -> None:
+    def _clear_text(self, text: Text, update_canvas: bool = False) -> None:
         """Clears a lines of text on the canvas by writing a line of "█" characters
 
         Args:
@@ -88,15 +111,15 @@ class LedMatrixNowPlayingDisplay:
                 the text. Defaults to False.
         """
         DrawText(
-            CANVAS,
+            self.canvas,
             FONT,
             0,
             text.y_pos,
             text.CLEAR_TEXT_COLOR,
-            "█" * ceil(MATRIX.width / FONT_WIDTH),
+            "█" * ceil(self.matrix.width / FONT_WIDTH),
         )
         if update_canvas:
-            MATRIX.SwapOnVSync(CANVAS)
+            self.matrix.SwapOnVSync(self.canvas)
 
     def clear_artist(self, update_canvas: bool = False) -> None:
         """Clears the artist text
@@ -116,7 +139,71 @@ class LedMatrixNowPlayingDisplay:
         """
         self._clear_text(self.media_title, update_canvas)
 
-    def handle_mqtt_message(self, _: Any, __: Any, message: MQTTMessage) -> None:
+    def force_write_artist(
+        self, *, clear_first: bool = False, swap_on_vsync: bool = False
+    ) -> None:
+        """Forces the artist to be written to the canvas
+
+        Args:
+            clear_first (bool, optional): whether to clear the artist text before
+                writing
+            swap_on_vsync (bool, optional): update the canvas after writing the text
+        """
+        DrawText(
+            self.canvas,
+            FONT,
+            self.artist.get_next_x_pos(),
+            self.artist.y_pos,
+            self.artist.color,
+            self.artist.display_content,
+        )
+
+        if clear_first:
+            self.clear_artist()
+
+        if swap_on_vsync:
+            self.matrix.SwapOnVSync(self.canvas)
+
+    def force_write_artwork(self, *, swap_on_vsync: bool = False) -> None:
+        """Forces the artwork to be written to the canvas"""
+        self.canvas.SetImage(
+            self.artwork_image.get_image(
+                self.image_size,
+                convert="RGB",
+            ),
+            offset_x=self.image_x_pos,
+            offset_y=self.image_y_pos,
+        )
+
+        if swap_on_vsync:
+            self.matrix.SwapOnVSync(self.canvas)
+
+    def force_write_media_title(
+        self, *, clear_first: bool = False, swap_on_vsync: bool = False
+    ) -> None:
+        """Forces the media title to be written to the canvas
+
+        Args:
+            clear_first (bool, optional): whether to clear the media title text before
+                writing
+            swap_on_vsync (bool, optional): update the canvas after writing the text
+        """
+        DrawText(
+            self.canvas,
+            FONT,
+            self.media_title.get_next_x_pos(),
+            self.media_title.y_pos,
+            self.media_title.color,
+            self.media_title.display_content,
+        )
+
+        if clear_first:
+            self.clear_media_title()
+
+        if swap_on_vsync:
+            self.matrix.SwapOnVSync(self.canvas)
+
+    def handle_mqtt_message(self, message: MQTTMessage) -> None:
         """Handles an MQTT message
 
         Args:
@@ -152,8 +239,8 @@ class LedMatrixNowPlayingDisplay:
     def start_loop(self) -> None:
         """Starts the loop for displaying the track information
 
-        Instead of using `MATRIX.Clear()` to clear the canvas, I "clear" the text by
-        overwriting it with a string of black "█" characters, then write the
+        Instead of using `self.matrix.Clear()` to clear the canvas, I "clear" the text
+        by overwriting it with a string of black "█" characters, then write the
         new/scrolled text in place. This stops me from having to re-display the artwork
         and any unchanged text on each loop, and instead I only update the bits I need
         to!
@@ -169,40 +256,15 @@ class LedMatrixNowPlayingDisplay:
                 )
 
                 self.artwork_image = self._next_artwork_image
-                CANVAS.SetImage(
-                    self.artwork_image.get_image(
-                        self.image_size,
-                        convert="RGB",
-                    ),
-                    offset_x=self.image_x_pos,
-                    offset_y=self.image_y_pos,
-                )
+                self.force_write_artwork()
 
-            if media_title_scrollable := self.media_title.scrollable:
-                self.clear_media_title()
-
-            if artist_scrollable := self.artist.scrollable:
-                self.clear_artist()
-
-            DrawText(
-                CANVAS,
-                FONT,
-                self.media_title.get_next_x_pos(),
-                self.media_title.y_pos,
-                self.media_title.color,
-                self.media_title.display_content,
+            self.force_write_artist(
+                clear_first=(artist_scrollable := self.artist.scrollable)
             )
-
-            DrawText(
-                CANVAS,
-                FONT,
-                self.artist.get_next_x_pos(),
-                self.artist.y_pos,
-                self.artist.color,
-                self.artist.display_content,
+            self.force_write_media_title(
+                clear_first=(media_title_scrollable := self.media_title.scrollable),
+                swap_on_vsync=True,
             )
-
-            MATRIX.SwapOnVSync(CANVAS)
 
             if media_title_scrollable or artist_scrollable:
                 # Wait 0.5s to refresh the screen
@@ -257,3 +319,27 @@ class LedMatrixNowPlayingDisplay:
 
         self.media_title.reset_x_pos()
         self.artist.reset_x_pos()
+
+    @property
+    def brightness(self) -> float:
+        """Gets the brightness of the display
+
+        Returns:
+            int: the brightness of the display
+        """
+        return self._brightness
+
+    @brightness.setter
+    def brightness(self, value: int) -> None:
+        """Sets the brightness of the display. Force updates all canvas content to
+        apply the brightness
+
+        Args:
+            value (int): the brightness of the display
+        """
+        self._brightness = value
+        self.matrix.brightness = value
+
+        self.force_write_artwork()
+        self.force_write_artist()
+        self.force_write_media_title(swap_on_vsync=True)

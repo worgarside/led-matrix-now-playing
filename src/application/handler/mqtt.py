@@ -28,6 +28,7 @@ MQTT_CLIENT.username_pw_set(username=MQTT_USERNAME, password=MQTT_PASSWORD)
 MQTT_HOST = getenv("MQTT_HOST", "homeassistant.local")
 
 HA_LED_MATRIX_PAYLOAD_TOPIC = "/homeassistant/led_matrix/display"
+HA_LED_MATRIX_BRIGHTNESS_TOPIC = "/homeassistant/led_matrix/brightness"
 
 
 @on_exception()  # type: ignore[misc]
