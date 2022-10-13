@@ -149,6 +149,10 @@ class LedMatrixNowPlayingDisplay:
                 writing
             swap_on_vsync (bool, optional): update the canvas after writing the text
         """
+
+        if clear_first:
+            self.clear_artist()
+
         DrawText(
             self.canvas,
             FONT,
@@ -157,9 +161,6 @@ class LedMatrixNowPlayingDisplay:
             self.artist.color,
             self.artist.display_content,
         )
-
-        if clear_first:
-            self.clear_artist()
 
         if swap_on_vsync:
             self.matrix.SwapOnVSync(self.canvas)
@@ -188,6 +189,9 @@ class LedMatrixNowPlayingDisplay:
                 writing
             swap_on_vsync (bool, optional): update the canvas after writing the text
         """
+        if clear_first:
+            self.clear_media_title()
+
         DrawText(
             self.canvas,
             FONT,
@@ -196,9 +200,6 @@ class LedMatrixNowPlayingDisplay:
             self.media_title.color,
             self.media_title.display_content,
         )
-
-        if clear_first:
-            self.clear_media_title()
 
         if swap_on_vsync:
             self.matrix.SwapOnVSync(self.canvas)
