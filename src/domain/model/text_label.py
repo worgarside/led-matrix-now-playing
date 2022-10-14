@@ -76,9 +76,6 @@ class Text:
         if next_x_pos <= -2 / 3 * self.label_len:
             # If 2/3 of the label has scrolled off the screen, reset to the original X
             # position to give a clean wrap effect
-            LOGGER.debug(
-                "Resetting x position from %i to %i", next_x_pos, self.original_x_pos
-            )
             next_x_pos = self.original_x_pos
 
         if not reference_only:

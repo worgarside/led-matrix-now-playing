@@ -25,9 +25,10 @@ add_stream_handler(LOGGER)
 try:
     from rgbmatrix import RGBMatrix, RGBMatrixOptions
     from rgbmatrix.graphics import DrawText
-except ImportError as exc:
+except ImportError as _rgb_matrix_import_exc:
     LOGGER.warning(
-        "Could not import `rgbmatrix`, using emulator instead: %s", repr(exc)
+        "Could not import `rgbmatrix`, using emulator instead: %s",
+        repr(_rgb_matrix_import_exc),
     )
 
     from RGBMatrixEmulator import RGBMatrix, RGBMatrixOptions
@@ -166,15 +167,40 @@ class LedMatrixNowPlayingDisplay:
             self.matrix.SwapOnVSync(self.canvas)
 
     def force_write_artwork(self, *, swap_on_vsync: bool = False) -> None:
-        """Forces the artwork to be written to the canvas"""
-        self.canvas.SetImage(
-            self.artwork_image.get_image(
-                self.image_size,
-                convert="RGB",
-            ),
-            offset_x=self.image_x_pos,
-            offset_y=self.image_y_pos,
-        )
+        """Forces the artwork to be written to the canvas
+
+        Args:
+            swap_on_vsync (bool, optional): update the canvas after writing the image
+
+        Raises:
+            Exception: if the `self.canvas.SetImage` call fails, and it's not due to a
+                non-RGB image
+        """
+        try:
+            self.canvas.SetImage(
+                self.artwork_image.get_image(
+                    self.image_size,
+                ),
+                offset_x=self.image_x_pos,
+                offset_y=self.image_y_pos,
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            if str(exc).startswith(
+                "Currently, only RGB mode is supported for SetImage()."
+            ):
+                LOGGER.error(
+                    "Unable to set image, RGB mode not supported."
+                    ' Retrying with `.convert("RGB")`'
+                )
+                self.canvas.SetImage(
+                    self.artwork_image.get_image(
+                        self.image_size,
+                    ).convert("RGB"),
+                    offset_x=self.image_x_pos,
+                    offset_y=self.image_y_pos,
+                )
+            else:
+                raise
 
         if swap_on_vsync:
             self.matrix.SwapOnVSync(self.canvas)
@@ -224,6 +250,11 @@ class LedMatrixNowPlayingDisplay:
                 album=payload.get("album"),
                 artist=payload.get("artist"),
                 url=album_artwork_url,
+                # Pre-caching seems like it should be faster, at least a bit, but I
+                # don't think the Pi Zero has enough power to cache the image in a
+                # separate thread, so it actually makes it ~2x slower :(
+                pre_cache=False,
+                pre_cache_size=self.image_size,
             )
         else:
             LOGGER.debug(
@@ -231,11 +262,34 @@ class LedMatrixNowPlayingDisplay:
             )
             artwork_image = NULL_IMAGE
 
-        self.update_display_values(
-            payload.get("title"),
-            payload.get("artist"),
-            artwork_image,
-        )
+        if any(
+            [
+                (
+                    artist_change := (
+                        self.artist.original_content
+                        != (new_artist_content := payload.get("artist"))
+                    )
+                ),
+                (
+                    media_title_change := (
+                        self.media_title.original_content
+                        != (new_media_title_content := payload.get("title"))
+                    )
+                ),
+                (artwork_change := (self.artwork_image.album != payload.get("album"))),
+            ]
+        ):
+            LOGGER.debug(
+                "Artist change: %s; Media Title change: %s, Artwork change: %s",
+                artist_change,
+                media_title_change,
+                artwork_change,
+            )
+            self.update_display_values(
+                new_media_title_content,
+                new_artist_content,
+                artwork_image,
+            )
 
     def start_loop(self) -> None:
         """Starts the loop for displaying the track information
@@ -279,7 +333,7 @@ class LedMatrixNowPlayingDisplay:
                     and self._next_artwork_image == self.artwork_image
                     and self.loop_active
                 ):
-                    sleep(0.1)
+                    pass
 
             if self._next_media_title_content != self.media_title.original_content:
                 LOGGER.debug(

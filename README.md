@@ -20,6 +20,7 @@
   - The dependencies needs to be installed as root because the script needs to be run as root to allow use of the matrix
 - Grant `root` read and write permissions to the `crt_artwork` directory
   ```bash
+  mkdir /home/pi/crt_artwork/
   sudo chmod -R 777 /home/pi/crt_artwork/
   ```
   - Again, this is because the script will be run as root

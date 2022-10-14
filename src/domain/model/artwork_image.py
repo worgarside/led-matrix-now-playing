@@ -6,6 +6,8 @@ from logging import DEBUG, getLogger
 from os.path import exists, isdir, isfile, join
 from pathlib import Path
 from re import compile as compile_regex
+from socket import gethostname
+from threading import Thread
 
 from PIL.Image import Image, Resampling
 from PIL.Image import open as open_image
@@ -21,21 +23,96 @@ add_stream_handler(LOGGER)
 class ArtworkImage:
     """Class for the creation, caching, and management of artwork images"""
 
-    ARTWORK_DIR = Path("/home/pi/crt_artwork")
+    ARTWORK_DIR = (
+        Path("/home/pi/crt_artwork")
+        if "pi" in gethostname()
+        else Path.home() / "crt_artwork"
+    )
     ALPHANUM_PATTERN = compile_regex(r"[\W_]+")
 
-    def __init__(self, album: str, artist: str, url: str) -> None:
+    def __init__(
+        self,
+        album: str,
+        artist: str,
+        url: str,
+        *,
+        pre_cache: bool = False,
+        pre_cache_size: int | None = None,
+    ) -> None:
         self.album = album
         self.artist = artist or "unknown"
         self.url = url
 
-    def download(self) -> None:
+        self._image_cache: Image | None = None
+        self.cache_in_progress: bool = False
+
+        if pre_cache:
+            cache_thread = Thread(
+                target=self._cache_image,
+                kwargs={"size": pre_cache_size},
+            )
+            cache_thread.start()
+
+    def _cache_image(self, size: int) -> None:
+        """Caches the image in memory for future use
+
+        Args:
+            size (int): integer value to use as height and width of artwork, in pixels
+        """
+        LOGGER.debug("Pre-caching image, setting cache_in_progress to True")
+
+        self.cache_in_progress = True
+
+        LOGGER.debug(
+            "Caching image in memory with size %s",
+            size,
+        )
+        self._image_cache = self._get_artwork_pil_image(size)
+        LOGGER.debug("Cache complete, setting cache_in_progress to False")
+        self.cache_in_progress = False
+
+    def _get_artwork_pil_image(
+        self, size: int | None = None, ignore_cache: bool = False
+    ) -> Image:
+        """Gets the Image of the artwork image from the cache, a local file, or a
+        remote URL
+
+        Args:
+            ignore_cache (bool): whether to ignore the cache and download/resize the
+                image
+
+        Returns:
+            Image: Image instance of the artwork image
+        """
+        if from_cache := self._image_cache is not None and ignore_cache is False:
+            LOGGER.debug("Using cached image for %s", self.album)
+
+            pil_image = self._image_cache
+        elif exists(self.file_path):
+            LOGGER.debug(
+                "Opening image from path %s for %s", self.file_path, self.album
+            )
+            with open(self.file_path, "rb") as fin:
+                pil_image = open_image(BytesIO(fin.read()))
+        else:
+            pil_image = open_image(BytesIO(self.download()))
+
+        # If a size is specified and the image hasn't already been cached (at this size)
+        if size and not from_cache:
+            LOGGER.debug("Resizing image to %ix%i", size, size)
+            pil_image = pil_image.resize((size, size), Resampling.LANCZOS)
+
+        return pil_image
+
+    def download(self) -> bytes:
         """Download the image from the URL to store it locally for future use"""
 
         if not isdir(self.ARTWORK_DIR / self.artist_directory):
             force_mkdir(self.ARTWORK_DIR / self.artist_directory)
 
         if isfile(self.url):
+            # Mainly used for copying the null image out of the repo into the artwork
+            # directory
             LOGGER.debug("Opening local image: %s", self.url)
             with open(self.url, "rb") as fin:
                 artwork_bytes = fin.read()
@@ -46,38 +123,35 @@ class ArtworkImage:
         with open(self.file_path, "wb") as fout:
             fout.write(artwork_bytes)
 
-        LOGGER.info("New image saved at %s", self.file_path)
+        LOGGER.info(
+            "New image from %s saved at %s for album %s",
+            self.url,
+            self.file_path,
+            self.album,
+        )
 
-    def get_image(
-        self,
-        size: int | None = None,
-        convert: str | None = None,
-    ) -> Image:
+        return artwork_bytes
+
+    def get_image(self, size: int | None = None, ignore_cache: bool = False) -> Image:
         """Returns the image as a PIL Image object, with optional resizing
 
         Args:
             size (int): integer value to use as height and width of artwork, in pixels
-            convert (str): optional color conversion to apply to the image
+            ignore_cache (bool): whether to ignore the cache and download/resize the
+                image again
 
         Returns:
             Image: PIL Image object of artwork
         """
 
-        if not exists(self.file_path):
-            self.download()
+        if self.cache_in_progress:
+            LOGGER.debug("Waiting for cache to finish")
+            while self.cache_in_progress:
+                pass
 
-        with open(self.file_path, "rb") as fin:
-            tk_img: Image = open_image(BytesIO(fin.read()))
+        pil_image: Image = self._get_artwork_pil_image(size, ignore_cache)
 
-        if size:
-            tk_img = tk_img.resize((size, size), Resampling.LANCZOS)
-
-        if convert:
-            tk_img = tk_img.convert(convert)
-
-        LOGGER.debug("Returning image from path %s", self.file_path)
-
-        return tk_img
+        return pil_image
 
     @property
     def artist_directory(self) -> str:
