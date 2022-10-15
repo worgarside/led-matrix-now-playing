@@ -4,6 +4,7 @@ from __future__ import annotations
 from logging import DEBUG, getLogger
 from pathlib import Path
 
+from wg_utilities.exceptions import on_exception
 from wg_utilities.loggers import add_stream_handler
 
 LOGGER = getLogger(__name__)
@@ -39,6 +40,7 @@ class Text:
     DEFAULT_TEXT_COLOR = Color(255, 255, 255)  # white
     CLEAR_TEXT_COLOR = Color()  # black
 
+    @on_exception()  # type: ignore[misc]
     def __init__(
         self,
         content: str,
@@ -56,6 +58,7 @@ class Text:
 
         self._current_x_pos = self.original_x_pos
 
+    @on_exception()  # type: ignore[misc]
     def get_next_x_pos(self, reference_only: bool = False) -> int:
         """Gets the next X position for the text (i.e. the same if it's a short label,
         but incremented for a scroll effect if it's a longer label)
@@ -83,6 +86,7 @@ class Text:
 
         return next_x_pos
 
+    @on_exception()  # type: ignore[misc]
     def reset_x_pos(self) -> None:
         """Resets the x position of the text to the original position"""
 

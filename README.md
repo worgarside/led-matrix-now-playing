@@ -9,7 +9,7 @@
 # Setup
 - Install the matrix drivers and dependencies
   ```bash
-  curl https://raw.githubusercontent.com/adafruit/Raspberry-Pi-Installer-Scripts/main/rgb-matrix.sh >rgb-matrix.sh
+  curl https://raw.githubusercontent.com/adafruit/Raspberry-Pi-Installer-Scripts/main/rgb-matrix.sh > rgb-matrix.sh
   sudo bash rgb-matrix.sh
   ```
   - The source for this is [an Adafruit guide](https://learn.adafruit.com/adafruit-rgb-matrix-bonnet-for-raspberry-pi/)

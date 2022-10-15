@@ -2,16 +2,24 @@
 
 from __future__ import annotations
 
-from json import dumps, loads
+from json import dumps
 from logging import DEBUG, getLogger
 from math import ceil
 from time import sleep
 from typing import Literal, TypedDict
 
 from dotenv import load_dotenv
-from paho.mqtt.client import MQTTMessage
+from paho.mqtt.publish import multiple
+from wg_utilities.exceptions import on_exception
 from wg_utilities.loggers import add_stream_handler
 
+from application.handler.mqtt import (
+    HA_LED_MATRIX_STATE_TOPIC,
+    HA_MTRXPI_CONTENT_TOPIC,
+    MQTT_HOST,
+    MQTT_PASSWORD,
+    MQTT_USERNAME,
+)
 from domain.model.artwork_image import NULL_IMAGE, ArtworkImage
 from domain.model.text_label import FONT, FONT_HEIGHT, FONT_WIDTH, Text
 
@@ -20,7 +28,6 @@ load_dotenv()
 LOGGER = getLogger(__name__)
 LOGGER.setLevel(DEBUG)
 add_stream_handler(LOGGER)
-
 
 try:
     from rgbmatrix import RGBMatrix, RGBMatrixOptions
@@ -33,15 +40,6 @@ except ImportError as _rgb_matrix_import_exc:
 
     from RGBMatrixEmulator import RGBMatrix, RGBMatrixOptions
     from RGBMatrixEmulator.graphics import DrawText
-
-
-NONE_VALUES = (
-    None,
-    "",
-    "None",
-    "none",
-    "null",
-)
 
 
 class LedMatrixOptionsInfo(TypedDict):
@@ -57,6 +55,24 @@ class LedMatrixOptionsInfo(TypedDict):
     show_refresh_rate: bool
 
 
+class HAPendingUpdatesInfo(TypedDict):
+    """Typing info for the record of pending attribute updates"""
+
+    artist: bool
+    entity_picture: bool
+    media_title: bool
+
+
+class HAPayloadInfo(TypedDict):
+    """Typing info for the payload of the MQTT message to Home Assistant"""
+
+    state: bool
+    media_title: str
+    artist: str
+    album: str
+    album_artwork_url: str
+
+
 class LedMatrixNowPlayingDisplay:
     """Class for displaying track information on an RGB LED Matrix"""
 
@@ -64,13 +80,14 @@ class LedMatrixNowPlayingDisplay:
         "cols": 64,
         "rows": 64,
         "brightness": 80,
-        "gpio_slowdown": 0,
+        "gpio_slowdown": 4,
         "hardware_mapping": "adafruit-hat",
         "inverse_colors": False,
         "led_rgb_sequence": "RGB",
         "show_refresh_rate": False,
     }
 
+    @on_exception()  # type: ignore[misc]
     def __init__(self, brightness: int | None = None) -> None:
         options = RGBMatrixOptions()
         for k, v in self.OPTIONS.items():
@@ -103,6 +120,13 @@ class LedMatrixNowPlayingDisplay:
 
         self.loop_active = False
 
+        self._pending_ha_updates: HAPendingUpdatesInfo = {
+            "media_title": False,
+            "artist": False,
+            "entity_picture": False,
+        }
+
+    @on_exception()  # type: ignore[misc]
     def _clear_text(self, text: Text, update_canvas: bool = False) -> None:
         """Clears a lines of text on the canvas by writing a line of "█" characters
 
@@ -122,6 +146,7 @@ class LedMatrixNowPlayingDisplay:
         if update_canvas:
             self.matrix.SwapOnVSync(self.canvas)
 
+    @on_exception()  # type: ignore[misc]
     def clear_artist(self, update_canvas: bool = False) -> None:
         """Clears the artist text
 
@@ -131,6 +156,7 @@ class LedMatrixNowPlayingDisplay:
         """
         self._clear_text(self.artist, update_canvas)
 
+    @on_exception()  # type: ignore[misc]
     def clear_media_title(self, update_canvas: bool = False) -> None:
         """Clears the media title text
 
@@ -140,6 +166,7 @@ class LedMatrixNowPlayingDisplay:
         """
         self._clear_text(self.media_title, update_canvas)
 
+    @on_exception()  # type: ignore[misc]
     def force_write_artist(
         self, *, clear_first: bool = False, swap_on_vsync: bool = False
     ) -> None:
@@ -166,6 +193,7 @@ class LedMatrixNowPlayingDisplay:
         if swap_on_vsync:
             self.matrix.SwapOnVSync(self.canvas)
 
+    @on_exception()  # type: ignore[misc]
     def force_write_artwork(self, *, swap_on_vsync: bool = False) -> None:
         """Forces the artwork to be written to the canvas
 
@@ -205,6 +233,7 @@ class LedMatrixNowPlayingDisplay:
         if swap_on_vsync:
             self.matrix.SwapOnVSync(self.canvas)
 
+    @on_exception()  # type: ignore[misc]
     def force_write_media_title(
         self, *, clear_first: bool = False, swap_on_vsync: bool = False
     ) -> None:
@@ -230,67 +259,7 @@ class LedMatrixNowPlayingDisplay:
         if swap_on_vsync:
             self.matrix.SwapOnVSync(self.canvas)
 
-    def handle_mqtt_message(self, message: MQTTMessage) -> None:
-        """Handles an MQTT message
-
-        Args:
-            message (MQTTMessage): the message object from the MQTT subscription
-        """
-
-        payload = loads(message.payload.decode())
-
-        LOGGER.debug("Received payload: %s", dumps(payload))
-
-        for k, v in payload.items():
-            if v in NONE_VALUES:
-                payload[k] = None
-
-        if (album_artwork_url := payload.get("album_artwork_url")) is not None:
-            artwork_image = ArtworkImage(
-                album=payload.get("album"),
-                artist=payload.get("artist"),
-                url=album_artwork_url,
-                # Pre-caching seems like it should be faster, at least a bit, but I
-                # don't think the Pi Zero has enough power to cache the image in a
-                # separate thread, so it actually makes it ~2x slower :(
-                pre_cache=False,
-                pre_cache_size=self.image_size,
-            )
-        else:
-            LOGGER.debug(
-                "No album artwork URL found in payload, defaulting to `NULL_IMAGE`"
-            )
-            artwork_image = NULL_IMAGE
-
-        if any(
-            [
-                (
-                    artist_change := (
-                        self.artist.original_content
-                        != (new_artist_content := payload.get("artist"))
-                    )
-                ),
-                (
-                    media_title_change := (
-                        self.media_title.original_content
-                        != (new_media_title_content := payload.get("title"))
-                    )
-                ),
-                (artwork_change := (self.artwork_image.album != payload.get("album"))),
-            ]
-        ):
-            LOGGER.debug(
-                "Artist change: %s; Media Title change: %s, Artwork change: %s",
-                artist_change,
-                media_title_change,
-                artwork_change,
-            )
-            self.update_display_values(
-                new_media_title_content,
-                new_artist_content,
-                artwork_image,
-            )
-
+    @on_exception()  # type: ignore[misc]
     def start_loop(self) -> None:
         """Starts the loop for displaying the track information
 
@@ -311,6 +280,11 @@ class LedMatrixNowPlayingDisplay:
                 )
 
                 self.artwork_image = self._next_artwork_image
+                self.pending_ha_updates = {
+                    "artist": self.pending_ha_updates["artist"],
+                    "entity_picture": True,
+                    "media_title": self.pending_ha_updates["media_title"],
+                }
                 self.force_write_artwork()
 
             self.force_write_artist(
@@ -343,6 +317,11 @@ class LedMatrixNowPlayingDisplay:
                 )
                 self.clear_media_title()
                 self.media_title.display_content = self._next_media_title_content
+                self.pending_ha_updates = {
+                    "artist": self.pending_ha_updates["artist"],
+                    "entity_picture": self.pending_ha_updates["entity_picture"],
+                    "media_title": True,
+                }
 
             if self._next_artist_content != self.artist.original_content:
                 LOGGER.debug(
@@ -352,7 +331,13 @@ class LedMatrixNowPlayingDisplay:
                 )
                 self.clear_artist()
                 self.artist.display_content = self._next_artist_content
+                self.pending_ha_updates = {
+                    "artist": True,
+                    "entity_picture": self.pending_ha_updates["entity_picture"],
+                    "media_title": self.pending_ha_updates["media_title"],
+                }
 
+    @on_exception()  # type: ignore[misc]
     def update_display_values(
         self,
         title: str | None,
@@ -398,3 +383,72 @@ class LedMatrixNowPlayingDisplay:
         self.force_write_artwork()
         self.force_write_artist()
         self.force_write_media_title(swap_on_vsync=True)
+
+    @property
+    def home_assistant_payload(self) -> HAPayloadInfo:
+        """
+        Returns:
+            HAPayloadInfo: the payload to send to Home Assistant for sensor updates
+        """
+        return {
+            "state": any(
+                [
+                    self.artwork_image != NULL_IMAGE,
+                    self.artist.display_content != "",
+                    self.media_title.display_content != "",
+                ]
+            ),
+            "media_title": self.media_title.original_content,
+            "artist": self.artist.original_content,
+            "album": self.artwork_image.album,
+            "album_artwork_url": self.artwork_image.url,
+        }
+
+    @property
+    def pending_ha_updates(self) -> HAPendingUpdatesInfo:
+        """
+        Returns:
+            HAPendingUpdatesInfo: a record of any pending attribute updates
+        """
+        return self._pending_ha_updates
+
+    @pending_ha_updates.setter
+    def pending_ha_updates(self, value: HAPendingUpdatesInfo) -> None:
+        """Updates the HA pending updates record and then sends the updates to HA if all
+         attributes are waiting to be updated
+
+        Args:
+            value (dict): this must be the entire dict: updating a single value will not
+                trigger this setter method and the updates won't be sent to HA
+        """
+        self._pending_ha_updates = value
+
+        if all(self._pending_ha_updates.values()):
+            multiple(
+                msgs=[
+                    {
+                        "topic": HA_LED_MATRIX_STATE_TOPIC,
+                        "payload": "ON"
+                        if any(
+                            [
+                                self.artwork_image != NULL_IMAGE,
+                                self.artist.display_content != "",
+                                self.media_title.display_content != "",
+                            ]
+                        )
+                        else "OFF",
+                    },
+                    {
+                        "topic": HA_MTRXPI_CONTENT_TOPIC,
+                        "payload": dumps(self.home_assistant_payload),
+                    },
+                ],
+                auth={"username": MQTT_USERNAME, "password": MQTT_PASSWORD},
+                hostname=MQTT_HOST,
+            )
+
+            self._pending_ha_updates = {
+                "entity_picture": False,
+                "media_title": False,
+                "artist": False,
+            }
