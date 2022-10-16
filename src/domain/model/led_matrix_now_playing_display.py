@@ -6,7 +6,7 @@ from json import dumps
 from logging import DEBUG, getLogger
 from math import ceil
 from threading import Thread
-from time import sleep
+from time import sleep, time
 from typing import Literal, TypedDict
 
 from dotenv import load_dotenv
@@ -68,10 +68,10 @@ class HAPayloadInfo(TypedDict):
     """Typing info for the payload of the MQTT message to Home Assistant"""
 
     state: bool
-    media_title: str
-    artist: str
-    album: str
-    album_artwork_url: str
+    media_title: str | None
+    artist: str | None
+    album: str | None
+    album_artwork_url: str | None
 
 
 class LedMatrixNowPlayingDisplay:
@@ -109,17 +109,19 @@ class LedMatrixNowPlayingDisplay:
             self.matrix.height - (FONT_HEIGHT * 2 + 2) - self.image_size
         ) / 2
 
-        self._media_title = Text("", media_title_y_pos, matrix_width=self.matrix.width)
-        self._artist = Text("", artist_y_pos, matrix_width=self.matrix.width)
+        self._media_title = Text("-", media_title_y_pos, matrix_width=self.matrix.width)
+        self._artist = Text("-", artist_y_pos, matrix_width=self.matrix.width)
         self._artwork_image = NULL_IMAGE
 
         self.scroll_thread = Thread(target=self._scroll_worker)
+        self.ha_update_thread = Thread(target=self._update_ha_worker)
 
         self._pending_ha_updates: HAPendingUpdatesInfo = {
             "media_title": False,
             "artist": False,
             "entity_picture": False,
         }
+        self._ha_last_updated = time()
 
     @on_exception()  # type: ignore[misc]
     def _clear_text(self, text: Text, update_canvas: bool = False) -> None:
@@ -159,16 +161,80 @@ class LedMatrixNowPlayingDisplay:
         LOGGER.debug("Scroll worker exiting")
 
     @on_exception()  # type: ignore[misc]
+    def _start_update_ha_worker(self) -> None:
+        """Starts the HA update worker thread if it is not already running"""
+        try:
+            if self.ha_update_thread.is_alive():
+                LOGGER.warning("HA update thread is already running")
+            else:
+                self.ha_update_thread.start()
+                LOGGER.debug("HA update thread is dead, restarted")
+        except (RuntimeError, AttributeError) as exc:
+            LOGGER.debug("Recreating HA update thread: %s", repr(exc))
+            self.ha_update_thread = Thread(target=self._update_ha_worker)
+            self.ha_update_thread.start()
+
+    @on_exception()  # type: ignore[misc]
     def _start_scroll_worker(self) -> None:
         """Starts the scroll worker thread if it is not already running"""
         try:
-            if not self.scroll_thread.is_alive():
+            if self.scroll_thread.is_alive():
+                LOGGER.warning("Scroll thread is already running")
+            else:
                 self.scroll_thread.start()
                 LOGGER.debug("Scroll thread is dead, restarted")
         except (RuntimeError, AttributeError) as exc:
             LOGGER.debug("Recreating scroll thread: %s", repr(exc))
             self.scroll_thread = Thread(target=self._scroll_worker)
             self.scroll_thread.start()
+
+    @on_exception()  # type: ignore[misc]
+    def _update_ha_worker(self) -> None:
+
+        start_time = time()
+
+        # Wait up to 2.5 seconds
+        while time() < start_time + 2.5 and not all(self.pending_ha_updates.values()):
+            sleep(0.1)
+
+        if not all(self.pending_ha_updates.values()):
+            LOGGER.warning(
+                "Timed out waiting for pending Home Assistant updates, sending current"
+                " values"
+            )
+
+        multiple(
+            msgs=[
+                {
+                    "topic": HA_LED_MATRIX_STATE_TOPIC,
+                    "payload": "ON"
+                    if any(
+                        [
+                            self.artwork_image != NULL_IMAGE,
+                            self.artist.display_content != "",
+                            self.media_title.display_content != "",
+                        ]
+                    )
+                    else "OFF",
+                },
+                {
+                    "topic": HA_MTRXPI_CONTENT_TOPIC,
+                    "payload": dumps(self.home_assistant_payload),
+                },
+            ],
+            auth={"username": MQTT_USERNAME, "password": MQTT_PASSWORD},
+            hostname=MQTT_HOST,
+        )
+
+        self._pending_ha_updates = {
+            "entity_picture": False,
+            "media_title": False,
+            "artist": False,
+        }
+
+        LOGGER.debug(
+            "Sent all pending updates to HA: %s", dumps(self.home_assistant_payload)
+        )
 
     @on_exception()  # type: ignore[misc]
     def clear_artist(self, update_canvas: bool = False) -> None:
@@ -355,6 +421,14 @@ class LedMatrixNowPlayingDisplay:
         Returns:
             HAPayloadInfo: the payload to send to Home Assistant for sensor updates
         """
+
+        if self.artwork_image == NULL_IMAGE:
+            album = None
+            album_artwork_url = None
+        else:
+            album = self.artwork_image.album
+            album_artwork_url = self.artwork_image.url
+
         return {
             "state": any(
                 [
@@ -363,10 +437,10 @@ class LedMatrixNowPlayingDisplay:
                     self.media_title.display_content != "",
                 ]
             ),
-            "media_title": self.media_title.original_content,
-            "artist": self.artist.original_content,
-            "album": self.artwork_image.album,
-            "album_artwork_url": self.artwork_image.url,
+            "media_title": self.media_title.original_content or None,
+            "artist": self.artist.original_content or None,
+            "album": album,
+            "album_artwork_url": album_artwork_url,
         }
 
     @property
@@ -382,6 +456,8 @@ class LedMatrixNowPlayingDisplay:
 
         if value == self.media_title.display_content:
             return
+
+        LOGGER.debug("Setting media title to: %s", value)
 
         self.media_title.display_content = value
         self.write_media_title(clear_first=True, swap_on_vsync=True)
@@ -417,39 +493,8 @@ class LedMatrixNowPlayingDisplay:
         """
         self._pending_ha_updates = value
 
-        if all(self._pending_ha_updates.values()):
-            multiple(
-                msgs=[
-                    {
-                        "topic": HA_LED_MATRIX_STATE_TOPIC,
-                        "payload": "ON"
-                        if any(
-                            [
-                                self.artwork_image != NULL_IMAGE,
-                                self.artist.display_content != "",
-                                self.media_title.display_content != "",
-                            ]
-                        )
-                        else "OFF",
-                    },
-                    {
-                        "topic": HA_MTRXPI_CONTENT_TOPIC,
-                        "payload": dumps(self.home_assistant_payload),
-                    },
-                ],
-                auth={"username": MQTT_USERNAME, "password": MQTT_PASSWORD},
-                hostname=MQTT_HOST,
-            )
-
-            self._pending_ha_updates = {
-                "entity_picture": False,
-                "media_title": False,
-                "artist": False,
-            }
-
-            LOGGER.debug(
-                "Sent all pending updates to HA: %s", dumps(self.home_assistant_payload)
-            )
+        if any(self._pending_ha_updates.values()):
+            self._start_update_ha_worker()
 
             if (
                 not self.home_assistant_payload.get("media_title")
@@ -458,6 +503,14 @@ class LedMatrixNowPlayingDisplay:
             ):
                 LOGGER.info("No content found, clearing matrix")
                 self.matrix.Clear()
+
+    @property
+    def ha_updates_available(self) -> bool:
+        """
+        Returns:
+            bool: True if any of the pending HA updates are True
+        """
+        return any(self.pending_ha_updates.values())
 
     @property
     def scrollable_content(self) -> bool:
