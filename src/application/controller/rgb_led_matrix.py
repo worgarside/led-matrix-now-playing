@@ -99,7 +99,12 @@ def on_message(_: Any, __: Any, message: MQTTMessage) -> None:
             message,
         )
     elif message.topic == HA_LED_MATRIX_BRIGHTNESS_TOPIC:
+        LOGGER.debug("Received brightness update: %s", message.payload.decode())
         LED_MATRIX.brightness = int(message.payload.decode())
+    else:
+        LOGGER.warning(
+            "Unknown topic: %s. Payload: %s", repr(message.topic), repr(message.payload)
+        )
 
 
 @on_exception()  # type: ignore[misc]
@@ -107,6 +112,7 @@ def main() -> None:
     """Connect and subscribe the MQTT client and initialize the display"""
 
     MQTT_CLIENT.subscribe(HA_LED_MATRIX_PAYLOAD_TOPIC)
+    MQTT_CLIENT.subscribe(HA_LED_MATRIX_BRIGHTNESS_TOPIC)
     MQTT_CLIENT.on_message = on_message
 
     single(

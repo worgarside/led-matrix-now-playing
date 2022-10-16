@@ -367,8 +367,16 @@ class LedMatrixNowPlayingDisplay:
         self.matrix.brightness = value
 
         self.write_artwork_image()
-        self.write_artist()
-        self.write_media_title(swap_on_vsync=True)
+
+        if not self.artist.scrollable:
+            # It'll get written in <=0.5s anyway, so no need to write it again. This
+            # also causes a brief overlap glitch on the matrix with scrolling text
+            self.write_artist()
+
+        if not self.media_title.scrollable:
+            self.write_media_title()
+
+        self.matrix.SwapOnVSync(self.canvas)
 
     @property
     def home_assistant_payload(self) -> HAPayloadInfo:
