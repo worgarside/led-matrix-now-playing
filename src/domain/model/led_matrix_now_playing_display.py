@@ -191,25 +191,6 @@ class LedMatrixNowPlayingDisplay:
         self._clear_text(self.media_title, update_canvas)
 
     @on_exception()  # type: ignore[misc]
-    def write_artwork_image(self, swap_on_vsync: bool = False) -> None:
-        """Writes the artwork image to the canvas
-
-        Args:
-            swap_on_vsync (bool, optional): whether to swap the canvas on vsync.
-                Defaults to False.
-        """
-        self.canvas.SetImage(
-            self.artwork_image.get_image(
-                self.image_size,
-            ).convert("RGB"),
-            offset_x=self.image_x_pos,
-            offset_y=self.image_y_pos,
-        )
-
-        if swap_on_vsync:
-            self.matrix.SwapOnVSync(self.canvas)
-
-    @on_exception()  # type: ignore[misc]
     def write_artist(
         self, *, clear_first: bool = False, swap_on_vsync: bool = False
     ) -> None:
@@ -231,6 +212,25 @@ class LedMatrixNowPlayingDisplay:
             self.artist.y_pos,
             self.artist.color,
             self.artist.display_content,
+        )
+
+        if swap_on_vsync:
+            self.matrix.SwapOnVSync(self.canvas)
+
+    @on_exception()  # type: ignore[misc]
+    def write_artwork_image(self, swap_on_vsync: bool = False) -> None:
+        """Writes the artwork image to the canvas
+
+        Args:
+            swap_on_vsync (bool, optional): whether to swap the canvas on vsync.
+                Defaults to False.
+        """
+        self.canvas.SetImage(
+            self.artwork_image.get_image(
+                self.image_size,
+            ).convert("RGB"),
+            offset_x=self.image_x_pos,
+            offset_y=self.image_y_pos,
         )
 
         if swap_on_vsync:
@@ -271,7 +271,7 @@ class LedMatrixNowPlayingDisplay:
     def artist(self, value: str) -> None:
         """Sets the artist text content"""
         if not isinstance(value, str):
-            raise TypeError("Value for `artist` must be a string")
+            raise TypeError(f"Value for `artist` must be a string: {repr(value)}")
 
         if value == self.artist.original_content:
             return
@@ -317,35 +317,6 @@ class LedMatrixNowPlayingDisplay:
             "entity_picture": True,
             "media_title": self.pending_ha_updates["media_title"],
         }
-
-    @property
-    def media_title(self) -> Text:
-        """Returns the media title content"""
-        return self._media_title
-
-    @media_title.setter
-    def media_title(self, value: str) -> None:
-        """Sets the media title content"""
-        if not isinstance(value, str):
-            raise TypeError("Value for `media_title` must be a string")
-
-        if value == self.media_title.display_content:
-            return
-
-        self.media_title.display_content = value
-        self.write_media_title(clear_first=True, swap_on_vsync=True)
-
-        self.pending_ha_updates = {
-            "artist": self.pending_ha_updates["artist"],
-            "entity_picture": self.pending_ha_updates["entity_picture"],
-            "media_title": True,
-        }
-
-        if self.media_title.scrollable:
-            LOGGER.debug(
-                "Sending request to start scroll thread from media_title setter"
-            )
-            self._start_scroll_worker()
 
     @property
     def brightness(self) -> float:
@@ -399,6 +370,35 @@ class LedMatrixNowPlayingDisplay:
         }
 
     @property
+    def media_title(self) -> Text:
+        """Returns the media title content"""
+        return self._media_title
+
+    @media_title.setter
+    def media_title(self, value: str) -> None:
+        """Sets the media title content"""
+        if not isinstance(value, str):
+            raise TypeError(f"Value for `media_title` must be a string: {repr(value)}")
+
+        if value == self.media_title.display_content:
+            return
+
+        self.media_title.display_content = value
+        self.write_media_title(clear_first=True, swap_on_vsync=True)
+
+        self.pending_ha_updates = {
+            "artist": self.pending_ha_updates["artist"],
+            "entity_picture": self.pending_ha_updates["entity_picture"],
+            "media_title": True,
+        }
+
+        if self.media_title.scrollable:
+            LOGGER.debug(
+                "Sending request to start scroll thread from media_title setter"
+            )
+            self._start_scroll_worker()
+
+    @property
     def pending_ha_updates(self) -> HAPendingUpdatesInfo:
         """
         Returns:
@@ -447,7 +447,17 @@ class LedMatrixNowPlayingDisplay:
                 "artist": False,
             }
 
-            # TODO if display is "off", clear the matrix?
+            LOGGER.debug(
+                "Sent all pending updates to HA: %s", dumps(self.home_assistant_payload)
+            )
+
+            if (
+                not self.home_assistant_payload.get("media_title")
+                and not self.home_assistant_payload.get("artist")
+                and self.artwork_image == NULL_IMAGE
+            ):
+                LOGGER.info("No content found, clearing matrix")
+                self.matrix.Clear()
 
     @property
     def scrollable_content(self) -> bool:

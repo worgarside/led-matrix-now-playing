@@ -80,8 +80,9 @@ def handle_display_update_message(message: MQTTMessage) -> None:
         )
         artwork_image = NULL_IMAGE
 
-    LED_MATRIX.artist = payload.get("artist")
-    LED_MATRIX.media_title = payload.get("title")
+    # Needs to be an `or` because None is valid as a value
+    LED_MATRIX.artist = payload.get("artist") or ""
+    LED_MATRIX.media_title = payload.get("title") or ""
 
     LED_MATRIX.artwork_image = artwork_image
 
