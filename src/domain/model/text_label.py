@@ -122,6 +122,8 @@ class Text:
             LOGGER.warning("Matrix width not set, defaulting scrollable to False")
             self.scrollable = False
 
+        self.reset_x_pos()
+
     @property
     def label_len(self) -> int:
         """

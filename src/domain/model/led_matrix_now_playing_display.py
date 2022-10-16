@@ -5,6 +5,7 @@ from __future__ import annotations
 from json import dumps
 from logging import DEBUG, getLogger
 from math import ceil
+from threading import Thread
 from time import sleep
 from typing import Literal, TypedDict
 
@@ -108,17 +109,11 @@ class LedMatrixNowPlayingDisplay:
             self.matrix.height - (FONT_HEIGHT * 2 + 2) - self.image_size
         ) / 2
 
-        self.media_title = Text("", media_title_y_pos, matrix_width=self.matrix.width)
-        self._next_media_title_content = self.media_title.display_content
-        self.artist = Text("", artist_y_pos, matrix_width=self.matrix.width)
-        self._next_artist_content = self.artist.display_content
+        self._media_title = Text("", media_title_y_pos, matrix_width=self.matrix.width)
+        self._artist = Text("", artist_y_pos, matrix_width=self.matrix.width)
+        self._artwork_image = NULL_IMAGE
 
-        self.artwork_image = NULL_IMAGE
-        self._next_artwork_image = NULL_IMAGE
-
-        self._brightness: int = brightness or self.OPTIONS["brightness"]
-
-        self.loop_active = False
+        self.scroll_thread = Thread(target=self._scroll_worker)
 
         self._pending_ha_updates: HAPendingUpdatesInfo = {
             "media_title": False,
@@ -128,7 +123,8 @@ class LedMatrixNowPlayingDisplay:
 
     @on_exception()  # type: ignore[misc]
     def _clear_text(self, text: Text, update_canvas: bool = False) -> None:
-        """Clears a lines of text on the canvas by writing a line of "█" characters
+        """Clears a lines of text on the canvas by writing a line of black "█"
+        characters
 
         Args:
             text (str): the text instance to clear
@@ -145,6 +141,34 @@ class LedMatrixNowPlayingDisplay:
         )
         if update_canvas:
             self.matrix.SwapOnVSync(self.canvas)
+
+    @on_exception()  # type: ignore[misc]
+    def _scroll_worker(self) -> None:
+        """Actively scrolls the media title and artist text when required"""
+
+        while self.scrollable_content:
+            if self.artist.scrollable:
+                self.write_artist(clear_first=True)
+
+            if self.media_title.scrollable:
+                self.write_media_title(clear_first=True)
+
+            self.matrix.SwapOnVSync(self.canvas)
+            sleep(0.5)
+
+        LOGGER.debug("Scroll worker exiting")
+
+    @on_exception()  # type: ignore[misc]
+    def _start_scroll_worker(self) -> None:
+        """Starts the scroll worker thread if it is not already running"""
+        try:
+            if not self.scroll_thread.is_alive():
+                self.scroll_thread.start()
+                LOGGER.debug("Scroll thread is dead, restarted")
+        except (RuntimeError, AttributeError) as exc:
+            LOGGER.debug("Recreating scroll thread: %s", repr(exc))
+            self.scroll_thread = Thread(target=self._scroll_worker)
+            self.scroll_thread.start()
 
     @on_exception()  # type: ignore[misc]
     def clear_artist(self, update_canvas: bool = False) -> None:
@@ -167,7 +191,26 @@ class LedMatrixNowPlayingDisplay:
         self._clear_text(self.media_title, update_canvas)
 
     @on_exception()  # type: ignore[misc]
-    def force_write_artist(
+    def write_artwork_image(self, swap_on_vsync: bool = False) -> None:
+        """Writes the artwork image to the canvas
+
+        Args:
+            swap_on_vsync (bool, optional): whether to swap the canvas on vsync.
+                Defaults to False.
+        """
+        self.canvas.SetImage(
+            self.artwork_image.get_image(
+                self.image_size,
+            ).convert("RGB"),
+            offset_x=self.image_x_pos,
+            offset_y=self.image_y_pos,
+        )
+
+        if swap_on_vsync:
+            self.matrix.SwapOnVSync(self.canvas)
+
+    @on_exception()  # type: ignore[misc]
+    def write_artist(
         self, *, clear_first: bool = False, swap_on_vsync: bool = False
     ) -> None:
         """Forces the artist to be written to the canvas
@@ -194,47 +237,7 @@ class LedMatrixNowPlayingDisplay:
             self.matrix.SwapOnVSync(self.canvas)
 
     @on_exception()  # type: ignore[misc]
-    def force_write_artwork(self, *, swap_on_vsync: bool = False) -> None:
-        """Forces the artwork to be written to the canvas
-
-        Args:
-            swap_on_vsync (bool, optional): update the canvas after writing the image
-
-        Raises:
-            Exception: if the `self.canvas.SetImage` call fails, and it's not due to a
-                non-RGB image
-        """
-        try:
-            self.canvas.SetImage(
-                self.artwork_image.get_image(
-                    self.image_size,
-                ),
-                offset_x=self.image_x_pos,
-                offset_y=self.image_y_pos,
-            )
-        except Exception as exc:  # pylint: disable=broad-except
-            if str(exc).startswith(
-                "Currently, only RGB mode is supported for SetImage()."
-            ):
-                LOGGER.error(
-                    "Unable to set image, RGB mode not supported."
-                    ' Retrying with `.convert("RGB")`'
-                )
-                self.canvas.SetImage(
-                    self.artwork_image.get_image(
-                        self.image_size,
-                    ).convert("RGB"),
-                    offset_x=self.image_x_pos,
-                    offset_y=self.image_y_pos,
-                )
-            else:
-                raise
-
-        if swap_on_vsync:
-            self.matrix.SwapOnVSync(self.canvas)
-
-    @on_exception()  # type: ignore[misc]
-    def force_write_media_title(
+    def write_media_title(
         self, *, clear_first: bool = False, swap_on_vsync: bool = False
     ) -> None:
         """Forces the media title to be written to the canvas
@@ -259,115 +262,99 @@ class LedMatrixNowPlayingDisplay:
         if swap_on_vsync:
             self.matrix.SwapOnVSync(self.canvas)
 
-    @on_exception()  # type: ignore[misc]
-    def start_loop(self) -> None:
-        """Starts the loop for displaying the track information
+    @property
+    def artist(self) -> Text:
+        """Returns the media title content"""
+        return self._artist
 
-        Instead of using `self.matrix.Clear()` to clear the canvas, I "clear" the text
-        by overwriting it with a string of black "█" characters, then write the
-        new/scrolled text in place. This stops me from having to re-display the artwork
-        and any unchanged text on each loop, and instead I only update the bits I need
-        to!
+    @artist.setter
+    def artist(self, value: str) -> None:
+        """Sets the artist text content"""
+        if not isinstance(value, str):
+            raise TypeError("Value for `artist` must be a string")
+
+        if value == self.artist.original_content:
+            return
+
+        self._artist.display_content = value
+        self.write_artist(clear_first=True, swap_on_vsync=True)
+
+        self.pending_ha_updates = {
+            "artist": True,
+            "entity_picture": self.pending_ha_updates["entity_picture"],
+            "media_title": self.pending_ha_updates["media_title"],
+        }
+
+        if self.artist.scrollable:
+            LOGGER.debug("Sending request to start scroll thread from artist setter")
+            self._start_scroll_worker()
+
+    @property
+    def artwork_image(self) -> ArtworkImage:
+        """Returns the current artwork image
+
+        Returns:
+            Image: the current artwork image
         """
-        self.loop_active = True
+        return self._artwork_image
 
-        while self.loop_active:
-            if self._next_artwork_image != self.artwork_image:
-                LOGGER.debug(
-                    "Updating artwork image from %s to %s",
-                    self.artwork_image,
-                    self._next_artwork_image,
-                )
-
-                self.artwork_image = self._next_artwork_image
-                self.pending_ha_updates = {
-                    "artist": self.pending_ha_updates["artist"],
-                    "entity_picture": True,
-                    "media_title": self.pending_ha_updates["media_title"],
-                }
-                self.force_write_artwork()
-
-            self.force_write_artist(
-                clear_first=(artist_scrollable := self.artist.scrollable)
-            )
-            self.force_write_media_title(
-                clear_first=(media_title_scrollable := self.media_title.scrollable),
-                swap_on_vsync=True,
-            )
-
-            if media_title_scrollable or artist_scrollable:
-                # Wait 0.5s to refresh the screen
-                sleep(0.5)
-            else:
-                # Wait until there's a change, no point refreshing the display if
-                # nothing has changed
-                while (
-                    self._next_media_title_content == self.media_title.display_content
-                    and self._next_artist_content == self.artist.display_content
-                    and self._next_artwork_image == self.artwork_image
-                    and self.loop_active
-                ):
-                    pass
-
-            if self._next_media_title_content != self.media_title.original_content:
-                LOGGER.debug(
-                    "Updating media title from `%s` to `%s`",
-                    self.media_title.display_content,
-                    self._next_media_title_content,
-                )
-                self.clear_media_title()
-                self.media_title.display_content = self._next_media_title_content
-                self.pending_ha_updates = {
-                    "artist": self.pending_ha_updates["artist"],
-                    "entity_picture": self.pending_ha_updates["entity_picture"],
-                    "media_title": True,
-                }
-
-            if self._next_artist_content != self.artist.original_content:
-                LOGGER.debug(
-                    "Updating artist from `%s` to `%s`",
-                    self.artist.display_content,
-                    self._next_artist_content,
-                )
-                self.clear_artist()
-                self.artist.display_content = self._next_artist_content
-                self.pending_ha_updates = {
-                    "artist": True,
-                    "entity_picture": self.pending_ha_updates["entity_picture"],
-                    "media_title": self.pending_ha_updates["media_title"],
-                }
-
-    @on_exception()  # type: ignore[misc]
-    def update_display_values(
-        self,
-        title: str | None,
-        artist: str | None,
-        artwork_image: ArtworkImage | None = None,
-    ) -> None:
-        """Updates the display values
+    @artwork_image.setter
+    def artwork_image(self, image: ArtworkImage) -> None:
+        """Sets the current artwork image
 
         Args:
-            title (str, optional): the title of the media
-            artist (str, optional): the artist of the media
-            artwork_image (ArtworkImage, optional): the artwork image of the media
+            image (ArtworkImage): the new artwork image
         """
-        LOGGER.debug("Updating display values: %s, %s", title, artist)
+        if image == self._artwork_image:
+            return
 
-        self._next_media_title_content = title or ""
-        self._next_artist_content = artist or ""
-        self._next_artwork_image = artwork_image or NULL_IMAGE
+        self._artwork_image = image
 
-        self.media_title.reset_x_pos()
-        self.artist.reset_x_pos()
+        self.write_artwork_image()
+
+        self.pending_ha_updates = {
+            "artist": self.pending_ha_updates["artist"],
+            "entity_picture": True,
+            "media_title": self.pending_ha_updates["media_title"],
+        }
+
+    @property
+    def media_title(self) -> Text:
+        """Returns the media title content"""
+        return self._media_title
+
+    @media_title.setter
+    def media_title(self, value: str) -> None:
+        """Sets the media title content"""
+        if not isinstance(value, str):
+            raise TypeError("Value for `media_title` must be a string")
+
+        if value == self.media_title.display_content:
+            return
+
+        self.media_title.display_content = value
+        self.write_media_title(clear_first=True, swap_on_vsync=True)
+
+        self.pending_ha_updates = {
+            "artist": self.pending_ha_updates["artist"],
+            "entity_picture": self.pending_ha_updates["entity_picture"],
+            "media_title": True,
+        }
+
+        if self.media_title.scrollable:
+            LOGGER.debug(
+                "Sending request to start scroll thread from media_title setter"
+            )
+            self._start_scroll_worker()
 
     @property
     def brightness(self) -> float:
         """Gets the brightness of the display
 
         Returns:
-            int: the brightness of the display
+            float: the brightness of the display
         """
-        return self._brightness
+        return float(self.matrix.brightness)
 
     @brightness.setter
     def brightness(self, value: int) -> None:
@@ -377,12 +364,11 @@ class LedMatrixNowPlayingDisplay:
         Args:
             value (int): the brightness of the display
         """
-        self._brightness = value
         self.matrix.brightness = value
 
-        self.force_write_artwork()
-        self.force_write_artist()
-        self.force_write_media_title(swap_on_vsync=True)
+        self.write_artwork_image()
+        self.write_artist()
+        self.write_media_title(swap_on_vsync=True)
 
     @property
     def home_assistant_payload(self) -> HAPayloadInfo:
@@ -452,3 +438,14 @@ class LedMatrixNowPlayingDisplay:
                 "media_title": False,
                 "artist": False,
             }
+
+            # TODO if display is "off", clear the matrix?
+
+    @property
+    def scrollable_content(self) -> bool:
+        """Returns whether the display has any scrollable content
+
+        Returns:
+            bool: True if there is scrollable content, False otherwise
+        """
+        return bool(self.media_title.scrollable or self.artist.scrollable)

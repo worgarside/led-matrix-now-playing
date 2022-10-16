@@ -80,38 +80,10 @@ def handle_display_update_message(message: MQTTMessage) -> None:
         )
         artwork_image = NULL_IMAGE
 
-    if any(
-        [
-            (
-                artist_change := (
-                    LED_MATRIX.artist.original_content
-                    != (new_artist_content := payload.get("artist"))
-                )
-            ),
-            (
-                media_title_change := (
-                    LED_MATRIX.media_title.original_content
-                    != (new_media_title_content := payload.get("title"))
-                )
-            ),
-            (
-                artwork_change := (
-                    LED_MATRIX.artwork_image.album != payload.get("album")
-                )
-            ),
-        ]
-    ):
-        LOGGER.debug(
-            "Artist change: %s; Media Title change: %s, Artwork change: %s",
-            artist_change,
-            media_title_change,
-            artwork_change,
-        )
-        LED_MATRIX.update_display_values(
-            new_media_title_content,
-            new_artist_content,
-            artwork_image,
-        )
+    LED_MATRIX.artist = payload.get("artist")
+    LED_MATRIX.media_title = payload.get("title")
+
+    LED_MATRIX.artwork_image = artwork_image
 
 
 @on_exception()  # type: ignore[misc]
@@ -135,17 +107,15 @@ def main() -> None:
     """Connect and subscribe the MQTT client and initialize the display"""
 
     MQTT_CLIENT.subscribe(HA_LED_MATRIX_PAYLOAD_TOPIC)
-
     MQTT_CLIENT.on_message = on_message
 
-    MQTT_CLIENT.loop_start()
     single(
         topic=HA_FORCE_UPDATE_TOPIC,
         payload=True,
         auth={"username": MQTT_USERNAME, "password": MQTT_PASSWORD},
         hostname=MQTT_HOST,
     )
-    LED_MATRIX.start_loop()
+    MQTT_CLIENT.loop_forever()
 
 
 if __name__ == "__main__":
