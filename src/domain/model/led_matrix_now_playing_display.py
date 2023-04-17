@@ -190,7 +190,6 @@ class LedMatrixNowPlayingDisplay:
 
     @on_exception()  # type: ignore[misc]
     def _update_ha_worker(self) -> None:
-
         start_time = time()
 
         # Wait up to 2.5 seconds
