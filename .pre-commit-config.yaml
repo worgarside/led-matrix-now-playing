@@ -95,16 +95,11 @@ repos:
           - --show-error-codes
         additional_dependencies:
           - types-requests
-          - types-paramiko
-          - boto3-stubs
-          - lxml-stubs
-          - types-flask
+          - types-paho-mqtt
           - types-Pillow
-          - types-setuptools
-          - types-tzlocal
-          - pydantic
-          - types-PyYAML
           - types-python-dateutil
+          - wg-utilities
+          - python-dotenv
 
   - repo: local
     hooks:
@@ -132,6 +127,8 @@ repos:
     rev: v2.2.4
     hooks:
       - id: codespell
+        additional_dependencies:
+          - tomli
         args:
           - --skip
           - '*.svg,*.json'

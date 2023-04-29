@@ -1,10 +1,8 @@
-"""
-Module for holding the main controller function(s) for controlling the GUI
-"""
+"""Module for holding the main controller function(s) for controlling the GUI."""
 from __future__ import annotations
 
 from logging import DEBUG, getLogger
-from os import getenv
+from os import environ, getenv
 from random import uniform
 from sys import exit as sys_exit
 from time import sleep
@@ -22,8 +20,8 @@ add_stream_handler(LOGGER)
 
 
 MQTT_CLIENT = Client()
-MQTT_USERNAME = getenv("MQTT_USERNAME")
-MQTT_PASSWORD = getenv("MQTT_PASSWORD")
+MQTT_USERNAME = environ["MQTT_USERNAME"]
+MQTT_PASSWORD = environ["MQTT_PASSWORD"]
 MQTT_CLIENT.username_pw_set(username=MQTT_USERNAME, password=MQTT_PASSWORD)
 MQTT_HOST = getenv("MQTT_HOST", "homeassistant.local")
 
@@ -34,11 +32,13 @@ HA_MTRXPI_CONTENT_TOPIC = "/homeassistant/mtrxpi/content"
 HA_FORCE_UPDATE_TOPIC = "/home-assistant/script/mtrxpi_update_display/run"
 
 
-@on_exception()  # type: ignore[misc]
+@on_exception()
 def on_connect(
     client: Client, userdata: dict[str, object], flags: dict[str, object], rc: int
 ) -> None:
-    """Called when the broker responds to our connection request.
+    """Log successful connection to MQTT broker.
+
+    Called when the broker responds to the connection request.
 
     Args:
         client (Client): the client instance for this callback
@@ -50,9 +50,11 @@ def on_connect(
     LOGGER.debug("MQTT Client connected")
 
 
-@on_exception()  # type: ignore[misc]
+@on_exception()
 def on_disconnect(client: Client, userdata: dict[str, object], rc: int) -> None:
-    """Called when the client disconnects from the broker
+    """Reconnect to MQTT broker if disconnected.
+
+    Called when the client disconnects from the broker.
 
     Args:
         client (Client): the client instance for this callback

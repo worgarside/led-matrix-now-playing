@@ -1,4 +1,4 @@
-"""Constants and class for managing the RGB LED Matrix"""
+"""Constants and class for managing the RGB LED Matrix."""
 
 from __future__ import annotations
 
@@ -31,20 +31,20 @@ LOGGER.setLevel(DEBUG)
 add_stream_handler(LOGGER)
 
 try:
-    from rgbmatrix import RGBMatrix, RGBMatrixOptions
-    from rgbmatrix.graphics import DrawText
+    from rgbmatrix import RGBMatrix, RGBMatrixOptions  # type: ignore[import]
+    from rgbmatrix.graphics import DrawText  # type: ignore[import]
 except ImportError as _rgb_matrix_import_exc:
     LOGGER.warning(
         "Could not import `rgbmatrix`, using emulator instead: %s",
         repr(_rgb_matrix_import_exc),
     )
 
-    from RGBMatrixEmulator import RGBMatrix, RGBMatrixOptions
-    from RGBMatrixEmulator.graphics import DrawText
+    from RGBMatrixEmulator import RGBMatrix, RGBMatrixOptions  # type: ignore[import]
+    from RGBMatrixEmulator.graphics import DrawText  # type: ignore[import]
 
 
 class LedMatrixOptionsInfo(TypedDict):
-    """Typing info for the matrix options"""
+    """Typing info for the matrix options."""
 
     cols: int
     rows: int
@@ -57,7 +57,7 @@ class LedMatrixOptionsInfo(TypedDict):
 
 
 class HAPendingUpdatesInfo(TypedDict):
-    """Typing info for the record of pending attribute updates"""
+    """Typing info for the record of pending attribute updates."""
 
     artist: bool
     entity_picture: bool
@@ -65,7 +65,7 @@ class HAPendingUpdatesInfo(TypedDict):
 
 
 class HAPayloadInfo(TypedDict):
-    """Typing info for the payload of the MQTT message to Home Assistant"""
+    """Typing info for the payload of the MQTT message to Home Assistant."""
 
     state: bool
     media_title: str | None
@@ -75,7 +75,7 @@ class HAPayloadInfo(TypedDict):
 
 
 class LedMatrixNowPlayingDisplay:
-    """Class for displaying track information on an RGB LED Matrix"""
+    """Class for displaying track information on an RGB LED Matrix."""
 
     OPTIONS: LedMatrixOptionsInfo = {
         "cols": 64,
@@ -88,7 +88,7 @@ class LedMatrixNowPlayingDisplay:
         "show_refresh_rate": False,
     }
 
-    @on_exception()  # type: ignore[misc]
+    @on_exception()
     def __init__(self, brightness: int | None = None) -> None:
         options = RGBMatrixOptions()
         for k, v in self.OPTIONS.items():
@@ -109,9 +109,11 @@ class LedMatrixNowPlayingDisplay:
             self.matrix.height - (FONT_HEIGHT * 2 + 2) - self.image_size
         ) / 2
 
-        self._media_title = Text("-", media_title_y_pos, matrix_width=self.matrix.width)
-        self._artist = Text("-", artist_y_pos, matrix_width=self.matrix.width)
-        self._artwork_image = NULL_IMAGE
+        self._media_title: Text = Text(
+            "-", media_title_y_pos, matrix_width=self.matrix.width
+        )
+        self._artist: Text = Text("-", artist_y_pos, matrix_width=self.matrix.width)
+        self._artwork_image: ArtworkImage = NULL_IMAGE
 
         self.scroll_thread = Thread(target=self._scroll_worker)
         self.ha_update_thread = Thread(target=self._update_ha_worker)
@@ -123,10 +125,9 @@ class LedMatrixNowPlayingDisplay:
         }
         self._ha_last_updated = time()
 
-    @on_exception()  # type: ignore[misc]
+    @on_exception()
     def _clear_text(self, text: Text, update_canvas: bool = False) -> None:
-        """Clears a lines of text on the canvas by writing a line of black "█"
-        characters
+        """Clear a line on the canvas by writing a line of black "█" characters.
 
         Args:
             text (str): the text instance to clear
@@ -144,9 +145,9 @@ class LedMatrixNowPlayingDisplay:
         if update_canvas:
             self.matrix.SwapOnVSync(self.canvas)
 
-    @on_exception()  # type: ignore[misc]
+    @on_exception()
     def _scroll_worker(self) -> None:
-        """Actively scrolls the media title and artist text when required"""
+        """Actively scrolls the media title and artist text when required."""
 
         while self.scrollable_content:
             if self.artist.scrollable:
@@ -160,9 +161,9 @@ class LedMatrixNowPlayingDisplay:
 
         LOGGER.debug("Scroll worker exiting")
 
-    @on_exception()  # type: ignore[misc]
+    @on_exception()
     def _start_update_ha_worker(self) -> None:
-        """Starts the HA update worker thread if it is not already running"""
+        """Start the HA update worker thread if it is not already running."""
         try:
             if self.ha_update_thread.is_alive():
                 LOGGER.warning("HA update thread is already running")
@@ -174,9 +175,9 @@ class LedMatrixNowPlayingDisplay:
             self.ha_update_thread = Thread(target=self._update_ha_worker)
             self.ha_update_thread.start()
 
-    @on_exception()  # type: ignore[misc]
+    @on_exception()
     def _start_scroll_worker(self) -> None:
-        """Starts the scroll worker thread if it is not already running"""
+        """Start the scroll worker thread if it is not already running."""
         try:
             if self.scroll_thread.is_alive():
                 LOGGER.warning("Scroll thread is already running")
@@ -188,7 +189,7 @@ class LedMatrixNowPlayingDisplay:
             self.scroll_thread = Thread(target=self._scroll_worker)
             self.scroll_thread.start()
 
-    @on_exception()  # type: ignore[misc]
+    @on_exception()
     def _update_ha_worker(self) -> None:
         start_time = time()
 
@@ -235,9 +236,9 @@ class LedMatrixNowPlayingDisplay:
             "Sent all pending updates to HA: %s", dumps(self.home_assistant_payload)
         )
 
-    @on_exception()  # type: ignore[misc]
+    @on_exception()
     def clear_artist(self, update_canvas: bool = False) -> None:
-        """Clears the artist text
+        """Clear the artist text.
 
         Args:
             update_canvas (bool, optional): whether to update the canvas after clearing
@@ -245,9 +246,9 @@ class LedMatrixNowPlayingDisplay:
         """
         self._clear_text(self.artist, update_canvas)
 
-    @on_exception()  # type: ignore[misc]
+    @on_exception()
     def clear_media_title(self, update_canvas: bool = False) -> None:
-        """Clears the media title text
+        """Clear the media title text.
 
         Args:
             update_canvas (bool, optional): whether to update the canvas after clearing
@@ -255,11 +256,11 @@ class LedMatrixNowPlayingDisplay:
         """
         self._clear_text(self.media_title, update_canvas)
 
-    @on_exception()  # type: ignore[misc]
+    @on_exception()
     def write_artist(
         self, *, clear_first: bool = False, swap_on_vsync: bool = False
     ) -> None:
-        """Forces the artist to be written to the canvas
+        """Force the artist to be written to the canvas.
 
         Args:
             clear_first (bool, optional): whether to clear the artist text before
@@ -282,9 +283,9 @@ class LedMatrixNowPlayingDisplay:
         if swap_on_vsync:
             self.matrix.SwapOnVSync(self.canvas)
 
-    @on_exception()  # type: ignore[misc]
+    @on_exception()
     def write_artwork_image(self, swap_on_vsync: bool = False) -> None:
-        """Writes the artwork image to the canvas
+        """Write the artwork image to the canvas.
 
         Args:
             swap_on_vsync (bool, optional): whether to swap the canvas on vsync.
@@ -301,11 +302,11 @@ class LedMatrixNowPlayingDisplay:
         if swap_on_vsync:
             self.matrix.SwapOnVSync(self.canvas)
 
-    @on_exception()  # type: ignore[misc]
+    @on_exception()
     def write_media_title(
         self, *, clear_first: bool = False, swap_on_vsync: bool = False
     ) -> None:
-        """Forces the media title to be written to the canvas
+        """Force the media title to be written to the canvas.
 
         Args:
             clear_first (bool, optional): whether to clear the media title text before
@@ -329,12 +330,12 @@ class LedMatrixNowPlayingDisplay:
 
     @property
     def artist(self) -> Text:
-        """Returns the media title content"""
+        """Returns the media title content."""
         return self._artist
 
     @artist.setter
     def artist(self, value: str) -> None:
-        """Sets the artist text content"""
+        """Set the artist text content."""
         if not isinstance(value, str):
             raise TypeError(f"Value for `artist` must be a string: {repr(value)}")
 
@@ -356,7 +357,7 @@ class LedMatrixNowPlayingDisplay:
 
     @property
     def artwork_image(self) -> ArtworkImage:
-        """Returns the current artwork image
+        """Returns the current artwork image.
 
         Returns:
             Image: the current artwork image
@@ -365,7 +366,7 @@ class LedMatrixNowPlayingDisplay:
 
     @artwork_image.setter
     def artwork_image(self, image: ArtworkImage) -> None:
-        """Sets the current artwork image
+        """Set the current artwork image.
 
         Args:
             image (ArtworkImage): the new artwork image
@@ -385,7 +386,7 @@ class LedMatrixNowPlayingDisplay:
 
     @property
     def brightness(self) -> float:
-        """Gets the brightness of the display
+        """Gets the brightness of the display.
 
         Returns:
             float: the brightness of the display
@@ -394,8 +395,9 @@ class LedMatrixNowPlayingDisplay:
 
     @brightness.setter
     def brightness(self, value: int) -> None:
-        """Sets the brightness of the display. Force updates all canvas content to
-        apply the brightness
+        """Set the brightness of the display.
+
+        Force updates all canvas content to apply the brightness.
 
         Args:
             value (int): the brightness of the display
@@ -416,7 +418,8 @@ class LedMatrixNowPlayingDisplay:
 
     @property
     def home_assistant_payload(self) -> HAPayloadInfo:
-        """
+        """Creates the payload to send to Home Assistant for sensor updates.
+
         Returns:
             HAPayloadInfo: the payload to send to Home Assistant for sensor updates
         """
@@ -444,12 +447,12 @@ class LedMatrixNowPlayingDisplay:
 
     @property
     def media_title(self) -> Text:
-        """Returns the media title content"""
+        """Returns the media title content."""
         return self._media_title
 
     @media_title.setter
     def media_title(self, value: str) -> None:
-        """Sets the media title content"""
+        """Set the media title content."""
         if not isinstance(value, str):
             raise TypeError(f"Value for `media_title` must be a string: {repr(value)}")
 
@@ -475,7 +478,8 @@ class LedMatrixNowPlayingDisplay:
 
     @property
     def pending_ha_updates(self) -> HAPendingUpdatesInfo:
-        """
+        """Returns a record of any pending attribute updates.
+
         Returns:
             HAPendingUpdatesInfo: a record of any pending attribute updates
         """
@@ -483,8 +487,7 @@ class LedMatrixNowPlayingDisplay:
 
     @pending_ha_updates.setter
     def pending_ha_updates(self, value: HAPendingUpdatesInfo) -> None:
-        """Updates the HA pending updates record and then sends the updates to HA if all
-         attributes are waiting to be updated
+        """Update the HA pending updates record and then send updates to HA.
 
         Args:
             value (dict): this must be the entire dict: updating a single value will not
@@ -505,7 +508,8 @@ class LedMatrixNowPlayingDisplay:
 
     @property
     def ha_updates_available(self) -> bool:
-        """
+        """Checks whether there are any pending HA updates.
+
         Returns:
             bool: True if any of the pending HA updates are True
         """
@@ -513,7 +517,7 @@ class LedMatrixNowPlayingDisplay:
 
     @property
     def scrollable_content(self) -> bool:
-        """Returns whether the display has any scrollable content
+        """Returns whether the display has any scrollable content.
 
         Returns:
             bool: True if there is scrollable content, False otherwise

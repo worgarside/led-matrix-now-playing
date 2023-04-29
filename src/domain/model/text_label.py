@@ -1,4 +1,4 @@
-"""Constants and class for text labels on the RGB LED Matrix"""
+"""Constants and class for text labels on the RGB LED Matrix."""
 from __future__ import annotations
 
 from logging import DEBUG, getLogger
@@ -12,13 +12,13 @@ LOGGER.setLevel(DEBUG)
 add_stream_handler(LOGGER)
 
 try:
-    from rgbmatrix.graphics import Color, Font
+    from rgbmatrix.graphics import Color, Font  # type: ignore[import]
 except ImportError as exc:
     LOGGER.warning(
         "Could not import `rgbmatrix`, using emulator instead: %s", repr(exc)
     )
 
-    from RGBMatrixEmulator.graphics import Color, Font
+    from RGBMatrixEmulator.graphics import Color, Font  # type: ignore[import]
 
 FONT_WIDTH = 5
 FONT_HEIGHT = 7
@@ -35,12 +35,12 @@ FONT.LoadFont(
 
 
 class Text:
-    """Class for displaying text on the matrix"""
+    """Class for displaying text on the matrix."""
 
     DEFAULT_TEXT_COLOR = Color(255, 255, 255)  # white
     CLEAR_TEXT_COLOR = Color()  # black
 
-    @on_exception()  # type: ignore[misc]
+    @on_exception()
     def __init__(
         self,
         content: str,
@@ -58,10 +58,12 @@ class Text:
 
         self._current_x_pos = self.original_x_pos
 
-    @on_exception()  # type: ignore[misc]
+    @on_exception()
     def get_next_x_pos(self, reference_only: bool = False) -> int:
-        """Gets the next X position for the text (i.e. the same if it's a short label,
-        but incremented for a scroll effect if it's a longer label)
+        """Get the next X position for the text.
+
+        i.e. the same if it's a short label, but incremented for a scroll effect if it's
+        a longer label.
 
         Args:
             reference_only (bool): If True, the current x position will not be updated.
@@ -86,17 +88,18 @@ class Text:
 
         return next_x_pos
 
-    @on_exception()  # type: ignore[misc]
+    @on_exception()
     def reset_x_pos(self) -> None:
-        """Resets the x position of the text to the original position"""
+        """Reset the x position of the text to the original position."""
 
         self._current_x_pos = self.original_x_pos
 
     @property
     def display_content(self) -> str:
-        """
+        """Return a (potentially) formatted version of the text for display.
+
         Returns:
-            str: the display_content of the text
+            str: the display content of the text.
         """
         if self.scrollable:
             return ("   " + self.original_content + "   ") * 3
@@ -105,7 +108,7 @@ class Text:
 
     @display_content.setter
     def display_content(self, value: str) -> None:
-        """Sets the display_content of the text
+        """Set the display_content of the text.
 
         Args:
             value (str): the new display_content
@@ -126,7 +129,8 @@ class Text:
 
     @property
     def label_len(self) -> int:
-        """
+        """Return the length of the text in pixels.
+
         Returns:
             int: length of the text in pixels
         """
@@ -135,7 +139,8 @@ class Text:
 
     @property
     def matrix_width(self) -> int | None:
-        """
+        """Return the width of the matrix.
+
         Returns:
             int: the width of the matrix
         """
@@ -144,7 +149,8 @@ class Text:
 
     @matrix_width.setter
     def matrix_width(self, value: int | None) -> None:
-        """
+        """Return the width of the matrix.
+
         Args:
             value (int, optional): the width of the matrix
         """
@@ -153,7 +159,7 @@ class Text:
 
     @property
     def original_x_pos(self) -> int:
-        """Returns the x position of the text
+        """Return the x position of the text.
 
         Returns:
             int: x position of the text
@@ -174,7 +180,8 @@ class Text:
         return int((self.matrix_width - (len(self.original_content) * FONT_WIDTH)) / 2)
 
     def __len__(self) -> int:
-        """
+        """Return the number of characters in the text.
+
         Returns:
             int: the length of the text
         """
