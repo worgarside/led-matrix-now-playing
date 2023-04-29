@@ -1,4 +1,4 @@
-"""Displays track information on an RGB LED Matrix"""
+"""Displays track information on an RGB LED Matrix."""
 from __future__ import annotations
 
 from json import dumps, loads
@@ -16,7 +16,7 @@ from wg_utilities.loggers import add_stream_handler
 path.append(str(Path(__file__).parents[2]))
 
 # pylint: disable=wrong-import-position
-from application.handler.mqtt import (
+from application.handler.mqtt import (  # noqa: E402
     HA_FORCE_UPDATE_TOPIC,
     HA_LED_MATRIX_BRIGHTNESS_TOPIC,
     HA_LED_MATRIX_PAYLOAD_TOPIC,
@@ -25,8 +25,10 @@ from application.handler.mqtt import (
     MQTT_PASSWORD,
     MQTT_USERNAME,
 )
-from domain.model.artwork_image import NULL_IMAGE, ArtworkImage
-from domain.model.led_matrix_now_playing_display import LedMatrixNowPlayingDisplay
+from domain.model.artwork_image import NULL_IMAGE, ArtworkImage  # noqa: E402
+from domain.model.led_matrix_now_playing_display import (  # noqa: E402
+    LedMatrixNowPlayingDisplay,
+)
 
 load_dotenv()
 
@@ -46,9 +48,9 @@ NONE_VALUES = (
 )
 
 
-@on_exception()  # type: ignore[misc]
+@on_exception()
 def handle_display_update_message(message: MQTTMessage) -> None:
-    """Handles an MQTT message
+    """Handle an MQTT message.
 
     Args:
         message (MQTTMessage): the message object from the MQTT subscription
@@ -87,9 +89,9 @@ def handle_display_update_message(message: MQTTMessage) -> None:
     LED_MATRIX.artwork_image = artwork_image
 
 
-@on_exception()  # type: ignore[misc]
+@on_exception()
 def on_message(_: Any, __: Any, message: MQTTMessage) -> None:
-    """Callback method for updating env vars on MQTT message
+    """Handle an MQTT message.
 
     Args:
         message (MQTTMessage): the message object from the MQTT subscription
@@ -108,9 +110,9 @@ def on_message(_: Any, __: Any, message: MQTTMessage) -> None:
         )
 
 
-@on_exception()  # type: ignore[misc]
+@on_exception()
 def main() -> None:
-    """Connect and subscribe the MQTT client and initialize the display"""
+    """Connect and subscribe the MQTT client and initialize the display."""
 
     MQTT_CLIENT.subscribe(HA_LED_MATRIX_PAYLOAD_TOPIC)
     MQTT_CLIENT.subscribe(HA_LED_MATRIX_BRIGHTNESS_TOPIC)

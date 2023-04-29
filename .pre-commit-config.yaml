@@ -19,7 +19,7 @@ repos:
       - id: blacken-docs
 
   - repo: https://github.com/tox-dev/pyproject-fmt
-    rev: 0.9.2
+    rev: 0.10.0
     hooks:
       - id: pyproject-fmt
 
@@ -71,7 +71,7 @@ repos:
           - '4096'
 
   - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.30.0
+    rev: v1.31.0
     hooks:
       - id: yamllint
         args:
@@ -95,16 +95,11 @@ repos:
           - --show-error-codes
         additional_dependencies:
           - types-requests
-          - types-paramiko
-          - boto3-stubs
-          - lxml-stubs
-          - types-flask
+          - types-paho-mqtt
           - types-Pillow
-          - types-setuptools
-          - types-tzlocal
-          - pydantic
-          - types-PyYAML
           - types-python-dateutil
+          - wg-utilities
+          - python-dotenv
 
   - repo: local
     hooks:
@@ -132,11 +127,13 @@ repos:
     rev: v2.2.4
     hooks:
       - id: codespell
+        additional_dependencies:
+          - tomli
         args:
           - --skip
           - '*.svg,*.json'
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.0.261
+    rev: v0.0.262
     hooks:
       - id: ruff
