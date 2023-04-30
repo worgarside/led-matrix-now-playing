@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"name": "SSH FS - MtrxPi",
+			"uri": "ssh://mtrxpi/home/pi/led-matrix-now-playing"
+		}
+	],
+	"settings": {
+	}
+}
