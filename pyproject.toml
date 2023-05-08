@@ -10,7 +10,7 @@ packages = [{include = "led_matrix_now_playing"}]
 [tool.poetry.dependencies]
 python = "^3.10"
 pillow = "^9.5.0"
-requests = "^2.29.0"
+requests = "^2.30.0"
 wg-utilities = {extras = ["exceptions"], version = "^3.6.0"}
 paho-mqtt = "^1.6.1"
 python-dotenv = "^1.0.0"
