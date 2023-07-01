@@ -17,9 +17,9 @@ python-dotenv = "^1.0.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
-pre-commit = "^3.3.1"
-mypy = "^1.2.0"
-rgbmatrixemulator = "^0.8.4"
+pre-commit = "^3.3.3"
+mypy = "^1.4.1"
+rgbmatrixemulator = "^0.9.1"
 
 #  Tool Configs
 
