@@ -7,7 +7,7 @@ from logging import DEBUG, getLogger
 from math import ceil
 from threading import Thread
 from time import sleep, time
-from typing import Literal, TypedDict
+from typing import ClassVar, Literal, TypedDict
 
 from dotenv import load_dotenv
 from paho.mqtt.publish import multiple
@@ -77,7 +77,7 @@ class HAPayloadInfo(TypedDict):
 class LedMatrixNowPlayingDisplay:
     """Class for displaying track information on an RGB LED Matrix."""
 
-    OPTIONS: LedMatrixOptionsInfo = {
+    OPTIONS: ClassVar[LedMatrixOptionsInfo] = {
         "cols": 64,
         "rows": 64,
         "brightness": 80,
@@ -337,7 +337,7 @@ class LedMatrixNowPlayingDisplay:
     def artist(self, value: str) -> None:
         """Set the artist text content."""
         if not isinstance(value, str):
-            raise TypeError(f"Value for `artist` must be a string: {repr(value)}")
+            raise TypeError(f"Value for `artist` must be a string: {value!r}")
 
         if value == self.artist.original_content:
             return
@@ -454,7 +454,7 @@ class LedMatrixNowPlayingDisplay:
     def media_title(self, value: str) -> None:
         """Set the media title content."""
         if not isinstance(value, str):
-            raise TypeError(f"Value for `media_title` must be a string: {repr(value)}")
+            raise TypeError(f"Value for `media_title` must be a string: {value!r}")
 
         if value == self.media_title.display_content:
             return
