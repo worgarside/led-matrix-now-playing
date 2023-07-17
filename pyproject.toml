@@ -16,7 +16,7 @@ paho-mqtt = "^1.6.1"
 python-dotenv = "^1.0.0"
 
 [tool.poetry.group.dev.dependencies]
-black = "^23.3.0"
+black = "^23.7.0"
 pre-commit = "^3.3.3"
 mypy = "^1.4.1"
 rgbmatrixemulator = "^0.9.1"
