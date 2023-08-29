@@ -11,7 +11,7 @@ packages = [{include = "led_matrix_now_playing"}]
 python = "^3.10"
 pillow = "^10.0.0"
 requests = "^2.31.0"
-wg-utilities = {extras = ["exceptions"], version = "^3.8.0"}
+wg-utilities = {extras = ["exceptions"], version = "^3.11.3"}
 paho-mqtt = "^1.6.1"
 python-dotenv = "^1.0.0"
 
