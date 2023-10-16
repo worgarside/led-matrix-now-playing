@@ -20,7 +20,7 @@ black = "^23.9.1"
 pre-commit = "^3.4.0"
 mypy = "^1.5.1"
 rgbmatrixemulator = "^0.9.1"
-pylint = "<3.0.0"
+pylint = "<4.0.0"
 
 #  Tool Configs
 
