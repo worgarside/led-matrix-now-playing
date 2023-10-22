@@ -12,13 +12,13 @@ LOGGER.setLevel(DEBUG)
 add_stream_handler(LOGGER)
 
 try:
-    from rgbmatrix.graphics import Color, Font  # type: ignore[import]
+    from rgbmatrix.graphics import Color, Font  # type: ignore[import-not-found]
 except ImportError as exc:
     LOGGER.warning(
         "Could not import `rgbmatrix`, using emulator instead: %s", repr(exc)
     )
 
-    from RGBMatrixEmulator.graphics import Color, Font  # type: ignore[import]
+    from RGBMatrixEmulator.graphics import Color, Font  # type: ignore[import-not-found]
 
 FONT_WIDTH = 5
 FONT_HEIGHT = 7
