@@ -809,17 +809,18 @@ use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
 name = "rgbmatrixemulator"
-version = "0.9.1"
+version = "0.10.0"
 description = "A PC emulator for Raspberry Pi LED matrices driven by rpi-rgb-led-matrix"
 optional = false
 python-versions = "*"
 files = [
-    {file = "RGBMatrixEmulator-0.9.1.tar.gz", hash = "sha256:2f821d8d9630f9ecf784e09b87f5786aafc167fb4761c95f29cd10efd50368e0"},
+    {file = "RGBMatrixEmulator-0.10.0.tar.gz", hash = "sha256:6b2e9964f08bda7d1a3ed8841a56b3602e74b43401c312a3e4c4e88c5db21ae7"},
 ]
 
 [package.dependencies]
 bdfparser = "<=2.2.0"
 libsixel-python = ">=0.5.0"
+Pillow = ">=10.0.1"
 pygame = ">=2.0.1,<3"
 tornado = ">=6.1"
 
@@ -1051,4 +1052,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "70f64ed6fc125bf60d1820f3ea87c81ea698844378c3e47ff54aa54dd7fa8fa8"
+content-hash = "229467f956a385fad47904f58a168415528d943f9eb8bd6c416a9275bc7173e8"
