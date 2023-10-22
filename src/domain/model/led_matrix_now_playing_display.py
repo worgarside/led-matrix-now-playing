@@ -31,16 +31,19 @@ LOGGER.setLevel(DEBUG)
 add_stream_handler(LOGGER)
 
 try:
-    from rgbmatrix import RGBMatrix, RGBMatrixOptions  # type: ignore[import]
-    from rgbmatrix.graphics import DrawText  # type: ignore[import]
+    from rgbmatrix import RGBMatrix, RGBMatrixOptions  # type: ignore[import-not-found]
+    from rgbmatrix.graphics import DrawText  # type: ignore[import-not-found]
 except ImportError as _rgb_matrix_import_exc:
     LOGGER.warning(
         "Could not import `rgbmatrix`, using emulator instead: %s",
         repr(_rgb_matrix_import_exc),
     )
 
-    from RGBMatrixEmulator import RGBMatrix, RGBMatrixOptions  # type: ignore[import]
-    from RGBMatrixEmulator.graphics import DrawText  # type: ignore[import]
+    from RGBMatrixEmulator import (  # type: ignore[import-not-found]
+        RGBMatrix,
+        RGBMatrixOptions,
+    )
+    from RGBMatrixEmulator.graphics import DrawText  # type: ignore[import-not-found]
 
 
 class LedMatrixOptionsInfo(TypedDict):
