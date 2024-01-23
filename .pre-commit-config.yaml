@@ -99,7 +99,7 @@ repos:
           - types-Pillow
           - types-python-dateutil
           - wg-utilities==3.11.3
-          - python-dotenv==1.0.0
+          - python-dotenv==1.0.1
 
   - repo: local
     hooks:
