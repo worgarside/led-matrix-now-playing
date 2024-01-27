@@ -13,7 +13,7 @@ pillow = "^10.2.0"
 requests = "^2.31.0"
 wg-utilities = {extras = ["exceptions"], version = "^3.11.3"}
 paho-mqtt = "^1.6.1"
-python-dotenv = "^1.0.0"
+python-dotenv = "^1.0.1"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.6.0"
