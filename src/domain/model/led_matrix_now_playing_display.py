@@ -210,15 +210,17 @@ class LedMatrixNowPlayingDisplay:
             msgs=[
                 {
                     "topic": HA_LED_MATRIX_STATE_TOPIC,
-                    "payload": "ON"
-                    if any(
-                        [
-                            self.artwork_image != NULL_IMAGE,
-                            self.artist.display_content != "",
-                            self.media_title.display_content != "",
-                        ]
-                    )
-                    else "OFF",
+                    "payload": (
+                        "ON"
+                        if any(
+                            [
+                                self.artwork_image != NULL_IMAGE,
+                                self.artist.display_content != "",
+                                self.media_title.display_content != "",
+                            ]
+                        )
+                        else "OFF"
+                    ),
                 },
                 {
                     "topic": HA_MTRXPI_CONTENT_TOPIC,

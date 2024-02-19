@@ -1,4 +1,5 @@
 """Class for the creation, caching, and management of artwork images."""
+
 from __future__ import annotations
 
 from io import BytesIO

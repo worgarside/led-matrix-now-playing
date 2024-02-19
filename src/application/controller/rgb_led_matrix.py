@@ -1,4 +1,5 @@
 """Displays track information on an RGB LED Matrix."""
+
 from __future__ import annotations
 
 from json import dumps, loads

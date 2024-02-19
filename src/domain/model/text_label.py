@@ -1,4 +1,5 @@
 """Constants and class for text labels on the RGB LED Matrix."""
+
 from __future__ import annotations
 
 from logging import DEBUG, getLogger
