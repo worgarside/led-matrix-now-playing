@@ -12,7 +12,7 @@ python = ">=3.11,<3.12"
 pillow = "^10.2.0"
 requests = "^2.31.0"
 wg-utilities = {extras = ["exceptions"], version = "^5.14.1"}
-paho-mqtt = "^1.6.1"
+paho-mqtt = "^2.0.0"
 python-dotenv = "^1.0.1"
 
 [tool.poetry.group.dev.dependencies]
