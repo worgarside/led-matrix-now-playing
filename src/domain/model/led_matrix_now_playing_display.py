@@ -9,11 +9,6 @@ from threading import Thread
 from time import sleep, time
 from typing import ClassVar, Literal, TypedDict
 
-from dotenv import load_dotenv
-from paho.mqtt.publish import multiple
-from wg_utilities.exceptions import on_exception
-from wg_utilities.loggers import add_stream_handler
-
 from application.handler.mqtt import (
     HA_LED_MATRIX_STATE_TOPIC,
     HA_MTRXPI_CONTENT_TOPIC,
@@ -23,6 +18,10 @@ from application.handler.mqtt import (
 )
 from domain.model.artwork_image import NULL_IMAGE, ArtworkImage
 from domain.model.text_label import FONT, FONT_HEIGHT, FONT_WIDTH, Text
+from dotenv import load_dotenv
+from paho.mqtt.publish import multiple
+from wg_utilities.exceptions import on_exception
+from wg_utilities.loggers import add_stream_handler
 
 load_dotenv()
 
@@ -39,11 +38,11 @@ except ImportError as _rgb_matrix_import_exc:
         repr(_rgb_matrix_import_exc),
     )
 
-    from RGBMatrixEmulator import (  # type: ignore[import-not-found]
+    from RGBMatrixEmulator import (  # type: ignore[import-untyped]
         RGBMatrix,
         RGBMatrixOptions,
     )
-    from RGBMatrixEmulator.graphics import DrawText  # type: ignore[import-not-found]
+    from RGBMatrixEmulator.graphics import DrawText  # type: ignore[import-untyped]
 
 
 class LedMatrixOptionsInfo(TypedDict):
@@ -129,7 +128,7 @@ class LedMatrixNowPlayingDisplay:
         self._ha_last_updated = time()
 
     @on_exception()
-    def _clear_text(self, text: Text, update_canvas: bool = False) -> None:
+    def _clear_text(self, text: Text, *, update_canvas: bool = False) -> None:
         """Clear a line on the canvas by writing a line of black "█" characters.
 
         Args:
@@ -210,15 +209,17 @@ class LedMatrixNowPlayingDisplay:
             msgs=[
                 {
                     "topic": HA_LED_MATRIX_STATE_TOPIC,
-                    "payload": "ON"
-                    if any(
-                        [
-                            self.artwork_image != NULL_IMAGE,
-                            self.artist.display_content != "",
-                            self.media_title.display_content != "",
-                        ]
-                    )
-                    else "OFF",
+                    "payload": (
+                        "ON"
+                        if any(
+                            [
+                                self.artwork_image != NULL_IMAGE,
+                                self.artist.display_content != "",
+                                self.media_title.display_content != "",
+                            ]
+                        )
+                        else "OFF"
+                    ),
                 },
                 {
                     "topic": HA_MTRXPI_CONTENT_TOPIC,
@@ -240,7 +241,7 @@ class LedMatrixNowPlayingDisplay:
         )
 
     @on_exception()
-    def clear_artist(self, update_canvas: bool = False) -> None:
+    def clear_artist(self, *, update_canvas: bool = False) -> None:
         """Clear the artist text.
 
         Args:
@@ -250,7 +251,7 @@ class LedMatrixNowPlayingDisplay:
         self._clear_text(self.artist, update_canvas)
 
     @on_exception()
-    def clear_media_title(self, update_canvas: bool = False) -> None:
+    def clear_media_title(self, *, update_canvas: bool = False) -> None:
         """Clear the media title text.
 
         Args:
@@ -287,7 +288,7 @@ class LedMatrixNowPlayingDisplay:
             self.matrix.SwapOnVSync(self.canvas)
 
     @on_exception()
-    def write_artwork_image(self, swap_on_vsync: bool = False) -> None:
+    def write_artwork_image(self, *, swap_on_vsync: bool = False) -> None:
         """Write the artwork image to the canvas.
 
         Args:
@@ -474,9 +475,7 @@ class LedMatrixNowPlayingDisplay:
         }
 
         if self.media_title.scrollable:
-            LOGGER.debug(
-                "Sending request to start scroll thread from media_title setter"
-            )
+            LOGGER.debug("Sending request to start scroll thread from media_title setter")
             self._start_scroll_worker()
 
     @property

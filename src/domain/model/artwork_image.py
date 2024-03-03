@@ -1,19 +1,19 @@
 """Class for the creation, caching, and management of artwork images."""
+
 from __future__ import annotations
 
 from io import BytesIO
 from logging import DEBUG, getLogger
-from os.path import exists, isdir, isfile, join
 from pathlib import Path
+from re import Pattern
 from re import compile as compile_regex
-from socket import gethostname
 from threading import Thread
+from typing import ClassVar
 
 from PIL.Image import Image, Resampling
 from PIL.Image import open as open_image
 from requests import get
 from wg_utilities.exceptions import on_exception
-from wg_utilities.functions import force_mkdir
 from wg_utilities.loggers import add_stream_handler
 
 LOGGER = getLogger(__name__)
@@ -24,12 +24,8 @@ add_stream_handler(LOGGER)
 class ArtworkImage:
     """Class for the creation, caching, and management of artwork images."""
 
-    ARTWORK_DIR = (
-        Path("/home/pi/crt_artwork")
-        if "pi" in gethostname()
-        else Path.home() / "crt_artwork"
-    )
-    ALPHANUM_PATTERN = compile_regex(r"[\W_]+")
+    ARTWORK_DIR: ClassVar[Path] = Path.home() / "crt_artwork"
+    ALPHANUM_PATTERN: ClassVar[Pattern[str]] = compile_regex(r"[\W_]+")
 
     @on_exception()
     def __init__(
@@ -76,7 +72,7 @@ class ArtworkImage:
 
     @on_exception()
     def _get_artwork_pil_image(
-        self, size: int | None = None, ignore_cache: bool = False
+        self, size: int | None = None, *, ignore_cache: bool = False
     ) -> Image:
         """Get the Image of the artwork image from the cache/local file/remote URL.
 
@@ -92,11 +88,9 @@ class ArtworkImage:
             LOGGER.debug("Using cached image for %s", self.album)
 
             pil_image = self._image_cache
-        elif exists(self.file_path):
-            LOGGER.debug(
-                "Opening image from path %s for %s", self.file_path, self.album
-            )
-            with open(self.file_path, "rb") as fin:
+        elif self.file_path.is_file():
+            LOGGER.debug("Opening image from path %s for %s", self.file_path, self.album)
+            with self.file_path.open("rb") as fin:
                 pil_image = open_image(BytesIO(fin.read()))
         else:
             pil_image = open_image(BytesIO(self.download()))
@@ -112,21 +106,20 @@ class ArtworkImage:
     def download(self) -> bytes:
         """Download the image from the URL to store it locally for future use."""
 
-        if not isdir(self.ARTWORK_DIR / self.artist_directory):
-            force_mkdir(self.ARTWORK_DIR / self.artist_directory)
+        self.ARTWORK_DIR.joinpath(self.artist_directory).mkdir(
+            parents=True, exist_ok=True
+        )
 
-        if isfile(self.url):
+        if Path(self.url).is_file():
             # Mainly used for copying the null image out of the repo into the artwork
             # directory
             LOGGER.debug("Opening local image: %s", self.url)
-            with open(self.url, "rb") as fin:
-                artwork_bytes = fin.read()
+            artwork_bytes = Path(self.url).read_bytes()
         else:
             LOGGER.debug("Downloading artwork from remote URL: %s", self.url)
-            artwork_bytes = get(self.url).content
+            artwork_bytes = get(self.url, timeout=120).content
 
-        with open(self.file_path, "wb") as fout:
-            fout.write(artwork_bytes)
+        self.file_path.write_bytes(artwork_bytes)
 
         LOGGER.info(
             "New image from %s saved at %s for album %s",
@@ -138,7 +131,7 @@ class ArtworkImage:
         return artwork_bytes
 
     @on_exception()
-    def get_image(self, size: int | None = None, ignore_cache: bool = False) -> Image:
+    def get_image(self, size: int | None = None, *, ignore_cache: bool = False) -> Image:
         """Return the image as a PIL Image object, with optional resizing.
 
         Args:
@@ -178,13 +171,13 @@ class ArtworkImage:
         return str(ArtworkImage.ALPHANUM_PATTERN.sub("", self.album).lower() + ".png")
 
     @property
-    def file_path(self) -> str:
+    def file_path(self) -> Path:
         """Return the local path to the artwork image.
 
         Returns:
-            str: fully-qualified path to the artwork image
+            Path: fully-qualified path to the artwork image
         """
-        return join(self.ARTWORK_DIR, self.artist_directory, self.filename)
+        return self.ARTWORK_DIR / self.artist_directory / self.filename
 
     def __hash__(self) -> int:
         """Return the hash of the object."""

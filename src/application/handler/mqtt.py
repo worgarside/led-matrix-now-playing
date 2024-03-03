@@ -1,4 +1,5 @@
 """Module for holding the main controller function(s) for controlling the GUI."""
+
 from __future__ import annotations
 
 from logging import DEBUG, getLogger
@@ -70,9 +71,9 @@ def on_disconnect(client: Client, userdata: dict[str, object], rc: int) -> None:
             if MQTT_CLIENT.is_connected():
                 break
             LOGGER.error("MQTT Client failed to connect, retrying...")
-            sleep(i * (1 + uniform(0, 1)))
+            sleep(i * (1 + uniform(0, 1)))  # noqa: S311
         else:
-            raise ConnectionError("MQTT Client failed to connect")
+            raise ConnectionError("MQTT Client failed to connect")  # noqa: TRY301
     except ConnectionError:
         # The above doesn't seem to cause a non-zero exit code, so we'll do it manually
         sys_exit(1)

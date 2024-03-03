@@ -1,4 +1,5 @@
 """Constants and class for text labels on the RGB LED Matrix."""
+
 from __future__ import annotations
 
 from logging import DEBUG, getLogger
@@ -14,11 +15,9 @@ add_stream_handler(LOGGER)
 try:
     from rgbmatrix.graphics import Color, Font  # type: ignore[import-not-found]
 except ImportError as exc:
-    LOGGER.warning(
-        "Could not import `rgbmatrix`, using emulator instead: %s", repr(exc)
-    )
+    LOGGER.warning("Could not import `rgbmatrix`, using emulator instead: %s", repr(exc))
 
-    from RGBMatrixEmulator.graphics import Color, Font  # type: ignore[import-not-found]
+    from RGBMatrixEmulator.graphics import Color, Font  # type: ignore[import-untyped]
 
 FONT_WIDTH = 5
 FONT_HEIGHT = 7
@@ -59,7 +58,7 @@ class Text:
         self._current_x_pos = self.original_x_pos
 
     @on_exception()
-    def get_next_x_pos(self, reference_only: bool = False) -> int:
+    def get_next_x_pos(self, *, reference_only: bool = False) -> int:
         """Get the next X position for the text.
 
         i.e. the same if it's a short label, but incremented for a scroll effect if it's
@@ -118,9 +117,7 @@ class Text:
 
         if self.matrix_width:
             # Set the `scrollable` attribute based on the new display_content's length
-            self.scrollable = (
-                len(self.original_content) * FONT_WIDTH > self.matrix_width
-            )
+            self.scrollable = len(self.original_content) * FONT_WIDTH > self.matrix_width
         else:
             LOGGER.warning("Matrix width not set, defaulting scrollable to False")
             self.scrollable = False
