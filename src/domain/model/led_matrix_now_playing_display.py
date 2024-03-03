@@ -38,11 +38,11 @@ except ImportError as _rgb_matrix_import_exc:
         repr(_rgb_matrix_import_exc),
     )
 
-    from RGBMatrixEmulator import (  # type: ignore[import-not-found]
+    from RGBMatrixEmulator import (  # type: ignore[import-untyped]
         RGBMatrix,
         RGBMatrixOptions,
     )
-    from RGBMatrixEmulator.graphics import DrawText  # type: ignore[import-not-found]
+    from RGBMatrixEmulator.graphics import DrawText  # type: ignore[import-untyped]
 
 
 class LedMatrixOptionsInfo(TypedDict):

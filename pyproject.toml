@@ -8,10 +8,10 @@ readme = "README.md"
 packages = [{include = "led_matrix_now_playing"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = ">=3.11,<3.12"
 pillow = "^10.2.0"
 requests = "^2.31.0"
-wg-utilities = {extras = ["exceptions"], version = "^3.11.3"}
+wg-utilities = {extras = ["exceptions"], version = "^5.14.1"}
 paho-mqtt = "^1.6.1"
 python-dotenv = "^1.0.1"
 

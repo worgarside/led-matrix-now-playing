@@ -1,4 +1,7 @@
 ---
+default_language_version:
+  python: python3.11
+
 repos:
   - repo: https://github.com/worgarside/pre-commit-hooks-dependency-sync
     rev: 1.1.0
@@ -23,8 +26,9 @@ repos:
           - types-paho-mqtt
           - types-Pillow
           - types-python-dateutil
-          - wg-utilities==3.11.3
+          - wg-utilities==5.14.1
           - python-dotenv==1.0.1
+          - rgbmatrixemulator==0.10.0
 
   - repo: https://github.com/python-poetry/poetry
     rev: 1.8.0
