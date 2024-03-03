@@ -1,7 +1,5 @@
-PYTHON_VERSION ?= 3.11
-
 create-env:
-	virtualenv -p $(PYTHON_VERSION) .venv
+	virtualenv -p 3.11 .venv
 	$(MAKE) install
 
 install:
