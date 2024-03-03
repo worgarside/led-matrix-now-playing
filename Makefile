@@ -2,10 +2,10 @@ create-env:
 	virtualenv -p 3.11 .venv
 	$(MAKE) install
 
-install:
+install-python:
 	.venv/bin/pip install -r requirements.txt
 
-service:
+install-service:
 	sudo systemctl stop rgb_led_matrix.service
 	cp service/rgb_led_matrix.service /etc/systemd/system/
 	echo "Service file copied to /etc/systemd/system/rgb_led_matrix.service"
