@@ -16,108 +16,113 @@ paho-mqtt = "^1.6.1"
 python-dotenv = "^1.0.1"
 
 [tool.poetry.group.dev.dependencies]
-pre-commit = "^3.6.2"
 rgbmatrixemulator = "^0.10.0"
-pylint = "<4.0.0"
 
 #  Tool Configs
 
-[tool.black]
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-  | Pipfile\.lock
-)/
-'''
-
-[tool.isort]
-profile = "black"
-
-[tool.pytest.ini_options]
-minversion = "7.0"
-addopts = [
-    "-ra",
-    "--strict-markers",
-    "--strict-config",
-    "--cov-report=xml",
-    "--cov=./",
-    "-n",
-    "auto",
-]
-xfail_strict = true
-log_cli_level = "warning"
-env = []
-
-[tool.coverage.report]
-exclude_lines = ["pragma: no cover", "def __repr__", "def __str__", "@overload"]
-
 [tool.mypy]
 exclude = ["_local_sandbox"]
-show_error_codes = true
-# plugins = 'pydantic.mypy'
-follow_imports = "silent"
-warn_redundant_casts = true
-warn_unused_ignores = true
-disallow_any_generics = true
-check_untyped_defs = true
-no_implicit_reexport = true
-disallow_untyped_defs = true
 mypy_path = "src"
-namespace_packages = true
+follow_imports = "normal"
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
+disallow_untyped_defs = true
+
+warn_return_any = true
+warn_unused_ignores = true
+warn_unused_configs = true
+warn_redundant_casts = true
+
+no_implicit_optional = true
+strict_optional = true
+
+strict_equality = true
 explicit_package_bases = true
+show_error_codes = true
 
 [tool.codespell]
 ignore-words-list = "reenable"
 skip = '*.json,*.csv,*.xml,*.txt,*.lock'
 
-[tool.pycln]
-path = "*"
-expand_stars = true
-all = true
-no_gitignore = false
-
-[tool.pydantic-mypy]
-init_forbid_extra = true
-init_typed = true
-warn_required_dynamic_aliases = true
-warn_untyped_fields = true
-
 [tool.ruff]
-# Longer line length to avoid throwing errors in case where black doesn't
-# wrap the lines (e.g. a long URL).
-line-length = 120
-select = [
-    # https://github.com/charliermarsh/ruff#supported-rules
-    "B",   # Flake8 bugbear
-    "C4",  # Flake8 comprehensions
-    "D",   # pydocstyle
-    "E",   # Pycodestyle errors
-    "ERA", # Eradicate commented out code
-    "F",   # Pyflakes
-    "N",   # PEP8 Naming
-    "RUF", # Ruff-specific rules
-    "UP",  # PyUpgrade
-    "W",   # Pycodestyle warnings
+fix = true
+line-length = 90
+lint.select = [
+  "A",    # https://docs.astral.sh/ruff/rules/#flake8-builtins-a
+  "ARG",  # https://docs.astral.sh/ruff/rules/#flake8-unused-arguments-arg
+  "B",    # https://docs.astral.sh/ruff/rules/#flake8-bugbear-b
+  "C4",   # https://docs.astral.sh/ruff/rules/#flake8-comprehensions-c4
+  "COM",  # https://docs.astral.sh/ruff/rules/#flake8-commas-com
+  "D",    # https://docs.astral.sh/ruff/rules/#pydocstyle-d
+  "E",    # https://docs.astral.sh/ruff/rules/#error-e
+  "ERA",  # https://docs.astral.sh/ruff/rules/#eradicate-era
+  "F",    # https://docs.astral.sh/ruff/rules/#pyflakes-f
+  "FA",   # https://docs.astral.sh/ruff/rules/#flake8-future-annotations-fa
+  "FBT",  # https://docs.astral.sh/ruff/rules/#flake8-boolean-trap-fbt
+  "FLY",  # https://docs.astral.sh/ruff/rules/#flynt-fly
+  "FURB", # https://docs.astral.sh/ruff/rules/#refurb-furb
+  "G",    # https://docs.astral.sh/ruff/rules/#flake8-logging-format-g
+  "I",    # https://docs.astral.sh/ruff/rules/#isort-i
+  "ICN",  # https://docs.astral.sh/ruff/rules/#flake8-import-conventions-icn
+  "INT",  # https://docs.astral.sh/ruff/rules/#flake8-gettext-int
+  "ISC",  # https://docs.astral.sh/ruff/rules/#flake8-implicit-str-concat-isc
+  "LOG",  # https://docs.astral.sh/ruff/rules/#flake8-logging-log
+  "N",    # https://docs.astral.sh/ruff/rules/#pep8-naming-n
+  "PERF", # https://docs.astral.sh/ruff/rules/#perflint-perf
+  "PGH",  # https://docs.astral.sh/ruff/rules/#pygrep-hooks-pgh
+  "PIE",  # https://docs.astral.sh/ruff/rules/#flake8-pie-pie
+  "PL",   # https://docs.astral.sh/ruff/rules/#pylint-pl
+  "PGH",  # https://docs.astral.sh/ruff/rules/#pygrep-hooks-pgh
+  "PT",   # https://docs.astral.sh/ruff/rules/#flake8-pytest-style-pt
+  "PTH",  # https://docs.astral.sh/ruff/rules/#flake8-use-pathlib-pth
+  "Q",    # https://docs.astral.sh/ruff/rules/#flake8-quotes-q
+  "RET",  # https://docs.astral.sh/ruff/rules/#flake8-return-ret
+  "RSE",  # https://docs.astral.sh/ruff/rules/#flake8-raise-rse
+  "RUF",  # https://docs.astral.sh/ruff/rules/#ruff-specific-rules-ruf
+  "S",    # https://docs.astral.sh/ruff/rules/#flake8-bandit-s
+  "SIM",  # https://docs.astral.sh/ruff/rules/#flake8-simplify-sim
+  "TCH",  # https://docs.astral.sh/ruff/rules/#flake8-type-checking-tch
+  "TID",  # https://docs.astral.sh/ruff/rules/#flake8-tidy-imports-tid
+  "TRIO", # https://docs.astral.sh/ruff/rules/#flake8-trio-trio
+  "TRY",  # https://docs.astral.sh/ruff/rules/#tryceratops-try
+  "UP",   # https://docs.astral.sh/ruff/rules/#pyupgrade-up
+  "W",    # https://docs.astral.sh/ruff/rules/#warning-w
 ]
-ignore = [
-    "D107",  # public-init
-    "D202",  # no-blank-line-after-function
-    "D203",  # one-blank-line-before-class
-    "D213",  # multi-line-summary-second-line
-    "D400",  # first-line-end-with-period
-    "D406",  # new-line-after-section-name
-    "D407",  # dashed-underline-after-section
-    "UP037", # quoted-annotation
+lint.ignore = [
+  "D107",   # https://docs.astral.sh/ruff/rules/undocumented-public-init/
+  "D202",   # https://docs.astral.sh/ruff/rules/no-blank-line-after-function/
+  "S314",   # https://docs.astral.sh/ruff/rules/suspicious-xml-element-tree-usage/
+  "TRY003", # https://docs.astral.sh/ruff/rules/raise-vanilla-args/
+  "ISC001", # https://docs.astral.sh/ruff/rules/single-line-implicit-string-concatenation/
+  "COM812", # https://docs.astral.sh/ruff/rules/missing-trailing-comma/
 ]
 
-[tool.ruff.mccabe]
-max-complexity = 20
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["D104"]
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 115
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.pylint]
+max-args = 10
+
+[tool.ruff.lint.isort]
+required-imports = ["from __future__ import annotations"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+
+[tool.vulture]
+min_confidence = 70
+paths = ["tests", "wg_utilities"]
+sort_by_size = true

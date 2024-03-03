@@ -6,18 +6,16 @@ from json import dumps, loads
 from logging import DEBUG, getLogger
 from pathlib import Path
 from sys import path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from dotenv import load_dotenv
-from paho.mqtt.client import MQTTMessage
 from paho.mqtt.publish import single
 from wg_utilities.exceptions import on_exception
 from wg_utilities.loggers import add_stream_handler
 
 path.append(str(Path(__file__).parents[2]))
 
-# pylint: disable=wrong-import-position
-from application.handler.mqtt import (  # noqa: E402
+from application.handler.mqtt import (
     HA_FORCE_UPDATE_TOPIC,
     HA_LED_MATRIX_BRIGHTNESS_TOPIC,
     HA_LED_MATRIX_PAYLOAD_TOPIC,
@@ -26,10 +24,13 @@ from application.handler.mqtt import (  # noqa: E402
     MQTT_PASSWORD,
     MQTT_USERNAME,
 )
-from domain.model.artwork_image import NULL_IMAGE, ArtworkImage  # noqa: E402
-from domain.model.led_matrix_now_playing_display import (  # noqa: E402
+from domain.model.artwork_image import NULL_IMAGE, ArtworkImage
+from domain.model.led_matrix_now_playing_display import (
     LedMatrixNowPlayingDisplay,
 )
+
+if TYPE_CHECKING:
+    from paho.mqtt.client import MQTTMessage
 
 load_dotenv()
 
@@ -78,9 +79,7 @@ def handle_display_update_message(message: MQTTMessage) -> None:
             pre_cache_size=LED_MATRIX.image_size,
         )
     else:
-        LOGGER.debug(
-            "No album artwork URL found in payload, defaulting to `NULL_IMAGE`"
-        )
+        LOGGER.debug("No album artwork URL found in payload, defaulting to `NULL_IMAGE`")
         artwork_image = NULL_IMAGE
 
     # Needs to be an `or` because None is valid as a value
