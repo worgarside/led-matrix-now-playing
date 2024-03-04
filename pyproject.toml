@@ -16,7 +16,7 @@ paho-mqtt = "^1.6.1"
 python-dotenv = "^1.0.1"
 
 [tool.poetry.group.dev.dependencies]
-rgbmatrixemulator = "^0.11.1"
+rgbmatrixemulator = "^0.11.2"
 
 #  Tool Configs
 
