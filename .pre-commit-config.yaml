@@ -27,7 +27,6 @@ repos:
           - types-Pillow
           - types-python-dateutil
           - wg-utilities==5.14.1
-          - python-dotenv==1.0.1
           - rgbmatrixemulator==0.11.2
 
   - repo: https://github.com/python-poetry/poetry
