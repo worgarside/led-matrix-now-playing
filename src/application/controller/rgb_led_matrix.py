@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any
 
 from dotenv import load_dotenv
 from paho.mqtt.publish import single
-from wg_utilities.exceptions import on_exception
 from wg_utilities.loggers import add_stream_handler
 
 path.append(str(Path(__file__).parents[2]))
@@ -50,7 +49,6 @@ NONE_VALUES = (
 )
 
 
-@on_exception()
 def handle_display_update_message(message: MQTTMessage) -> None:
     """Handle an MQTT message.
 
@@ -89,7 +87,6 @@ def handle_display_update_message(message: MQTTMessage) -> None:
     LED_MATRIX.artwork_image = artwork_image
 
 
-@on_exception()
 def on_message(_: Any, __: Any, message: MQTTMessage) -> None:
     """Handle an MQTT message.
 
@@ -110,7 +107,6 @@ def on_message(_: Any, __: Any, message: MQTTMessage) -> None:
         )
 
 
-@on_exception()
 def main() -> None:
     """Connect and subscribe the MQTT client and initialize the display."""
 

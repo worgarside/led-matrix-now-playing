@@ -22,7 +22,6 @@ from domain.model.artwork_image import NULL_IMAGE, ArtworkImage
 from domain.model.text_label import FONT, FONT_HEIGHT, FONT_WIDTH, Text
 from dotenv import load_dotenv
 from paho.mqtt.publish import multiple
-from wg_utilities.exceptions import on_exception
 from wg_utilities.loggers import add_stream_handler
 
 load_dotenv()
@@ -97,7 +96,6 @@ class LedMatrixNowPlayingDisplay:
         "show_refresh_rate": False,
     }
 
-    @on_exception()
     def __init__(self, brightness: int | None = None) -> None:
         options = RGBMatrixOptions()
         for k, v in self.OPTIONS.items():
@@ -134,7 +132,6 @@ class LedMatrixNowPlayingDisplay:
         }
         self._ha_last_updated = time()
 
-    @on_exception()
     def _clear_text(self, text: Text, *, update_canvas: bool = False) -> None:
         """Clear a line on the canvas by writing a line of black "█" characters.
 
@@ -154,7 +151,6 @@ class LedMatrixNowPlayingDisplay:
         if update_canvas:
             self.matrix.SwapOnVSync(self.canvas)
 
-    @on_exception()
     def _scroll_worker(self) -> None:
         """Actively scrolls the media title and artist text when required."""
 
@@ -170,7 +166,6 @@ class LedMatrixNowPlayingDisplay:
 
         LOGGER.debug("Scroll worker exiting")
 
-    @on_exception()
     def _start_update_ha_worker(self) -> None:
         """Start the HA update worker thread if it is not already running."""
         try:
@@ -184,7 +179,6 @@ class LedMatrixNowPlayingDisplay:
             self.ha_update_thread = Thread(target=self._update_ha_worker)
             self.ha_update_thread.start()
 
-    @on_exception()
     def _start_scroll_worker(self) -> None:
         """Start the scroll worker thread if it is not already running."""
         try:
@@ -198,7 +192,6 @@ class LedMatrixNowPlayingDisplay:
             self.scroll_thread = Thread(target=self._scroll_worker)
             self.scroll_thread.start()
 
-    @on_exception()
     def _update_ha_worker(self) -> None:
         start_time = time()
 
@@ -247,7 +240,6 @@ class LedMatrixNowPlayingDisplay:
             "Sent all pending updates to HA: %s", dumps(self.home_assistant_payload)
         )
 
-    @on_exception()
     def clear_artist(self, *, update_canvas: bool = False) -> None:
         """Clear the artist text.
 
@@ -257,7 +249,6 @@ class LedMatrixNowPlayingDisplay:
         """
         self._clear_text(self.artist, update_canvas)
 
-    @on_exception()
     def clear_media_title(self, *, update_canvas: bool = False) -> None:
         """Clear the media title text.
 
@@ -267,7 +258,6 @@ class LedMatrixNowPlayingDisplay:
         """
         self._clear_text(self.media_title, update_canvas)
 
-    @on_exception()
     def write_artist(
         self, *, clear_first: bool = False, swap_on_vsync: bool = False
     ) -> None:
@@ -294,7 +284,6 @@ class LedMatrixNowPlayingDisplay:
         if swap_on_vsync:
             self.matrix.SwapOnVSync(self.canvas)
 
-    @on_exception()
     def write_artwork_image(self, *, swap_on_vsync: bool = False) -> None:
         """Write the artwork image to the canvas.
 
@@ -313,7 +302,6 @@ class LedMatrixNowPlayingDisplay:
         if swap_on_vsync:
             self.matrix.SwapOnVSync(self.canvas)
 
-    @on_exception()
     def write_media_title(
         self, *, clear_first: bool = False, swap_on_vsync: bool = False
     ) -> None:
