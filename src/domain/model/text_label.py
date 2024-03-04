@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from logging import DEBUG, getLogger
 from pathlib import Path
 
@@ -12,9 +13,14 @@ LOGGER = getLogger(__name__)
 LOGGER.setLevel(DEBUG)
 add_stream_handler(LOGGER)
 
+sys.path.append(str(Path(__file__).parents[2] / "rgbmatrix"))
+
 try:
     from rgbmatrix.graphics import Color, Font  # type: ignore[import-not-found]
 except ImportError as exc:
+    if sys.platform == "linux":
+        raise
+
     LOGGER.warning("Could not import `rgbmatrix`, using emulator instead: %s", repr(exc))
 
     from RGBMatrixEmulator.graphics import Color, Font  # type: ignore[import-untyped]

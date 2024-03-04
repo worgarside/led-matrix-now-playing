@@ -44,7 +44,7 @@ show_error_codes = true
 
 [tool.codespell]
 ignore-words-list = "reenable"
-skip = '*.json,*.csv,*.xml,*.txt,*.lock'
+skip = '*.json,*.csv,*.xml,*.txt,*.lock,*.cpp'
 
 [tool.ruff]
 fix = true
