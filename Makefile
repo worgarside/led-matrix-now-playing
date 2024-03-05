@@ -1,9 +1,13 @@
 include .env
 export
 
-create-env:
+create:
 	virtualenv -p 3.11 .venv
 	$(MAKE) install-all
+
+	sudo mkdir -p /var/cache/led-matrix-now-playing
+	sudo chown -R root:root /var/cache/led-matrix-now-playing
+	sudo chmod -R 755 /var/cache/led-matrix-now-playing
 
 disable:
 	sudo systemctl disable rgb_led_matrix.service

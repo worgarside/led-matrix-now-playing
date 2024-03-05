@@ -4,15 +4,17 @@ from __future__ import annotations
 
 from io import BytesIO
 from logging import DEBUG, getLogger
+from os import getenv
 from pathlib import Path
 from re import Pattern
 from re import compile as compile_regex
 from threading import Thread
-from typing import ClassVar
+from typing import ClassVar, Final
 
 from PIL.Image import Image, Resampling
 from PIL.Image import open as open_image
 from requests import get
+from wg_utilities.functions import force_mkdir
 from wg_utilities.loggers import add_stream_handler
 
 LOGGER = getLogger(__name__)
@@ -23,7 +25,9 @@ add_stream_handler(LOGGER)
 class ArtworkImage:
     """Class for the creation, caching, and management of artwork images."""
 
-    ARTWORK_DIR: ClassVar[Path] = Path.cwd() / "crt_artwork"
+    ARTWORK_DIR: Final[Path] = force_mkdir(
+        Path(getenv("ARTWORK_DIR", "/var/cache/led-matrix-now-playing/artwork")).resolve()
+    )
     ALPHANUM_PATTERN: ClassVar[Pattern[str]] = compile_regex(r"[\W_]+")
 
     def __init__(
@@ -189,3 +193,6 @@ class ArtworkImage:
 NULL_IMAGE = ArtworkImage(
     "null", "null", str(Path(__file__).parents[3] / "assets" / "images" / "null.png")
 )
+
+
+LOGGER.debug("Artwork directory: %s", ArtworkImage.ARTWORK_DIR.as_posix())
