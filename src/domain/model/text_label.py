@@ -17,6 +17,8 @@ add_stream_handler(LOGGER)
 try:
     from rgbmatrix.graphics import Color, Font  # type: ignore[import-not-found]
 except ImportError as exc:
+    if sys.platform == "linux":
+        raise
     LOGGER.warning("Could not import `rgbmatrix`, using emulator instead: %s", repr(exc))
 
     from RGBMatrixEmulator.graphics import Color, Font  # type: ignore[import-untyped]
