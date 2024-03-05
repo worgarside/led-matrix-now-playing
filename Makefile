@@ -18,6 +18,8 @@ create:
 	$(MAKE) -C rpi-rgb-led-matrix/bindings/python build-python PYTHON=/home/pi/led-matrix-now-playing/.venv/bin/python
 	$(MAKE) -C rpi-rgb-led-matrix/bindings/python install-python PYTHON=/home/pi/led-matrix-now-playing/.venv/bin/python
 
+	sudo rm -rf rpi-rgb-led-matrix
+
 disable:
 	sudo systemctl disable rgb_led_matrix.service
 
