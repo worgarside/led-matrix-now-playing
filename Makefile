@@ -16,6 +16,9 @@ install-all:
 	@$(MAKE) install-python
 	@$(MAKE) install-service
 
+run:
+	.venv/bin/python src/application/controller/rgb_led_matrix.py
+
 update:
 	git add .
 	git stash save "Stash before update @ $(shell date)"
