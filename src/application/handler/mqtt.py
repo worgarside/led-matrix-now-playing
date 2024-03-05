@@ -9,7 +9,6 @@ from sys import exit as sys_exit
 from time import sleep
 
 from paho.mqtt.client import Client
-from wg_utilities.exceptions import on_exception
 from wg_utilities.loggers import add_stream_handler
 
 LOGGER = getLogger(__name__)
@@ -30,7 +29,6 @@ HA_MTRXPI_CONTENT_TOPIC = "/homeassistant/mtrxpi/content"
 HA_FORCE_UPDATE_TOPIC = "/home-assistant/script/mtrxpi_update_display/run"
 
 
-@on_exception()
 def on_connect(
     client: Client, userdata: dict[str, object], flags: dict[str, object], rc: int
 ) -> None:
@@ -48,7 +46,6 @@ def on_connect(
     LOGGER.debug("MQTT Client connected")
 
 
-@on_exception()
 def on_disconnect(client: Client, userdata: dict[str, object], rc: int) -> None:
     """Reconnect to MQTT broker if disconnected.
 
@@ -76,6 +73,6 @@ def on_disconnect(client: Client, userdata: dict[str, object], rc: int) -> None:
         sys_exit(1)
 
 
-MQTT_CLIENT.on_connect = on_connect
+MQTT_CLIENT.on_connect = on_connect  # type: ignore[assignment]
 MQTT_CLIENT.on_disconnect = on_disconnect
 MQTT_CLIENT.connect(MQTT_HOST)
