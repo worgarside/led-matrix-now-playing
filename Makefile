@@ -11,7 +11,7 @@ create:
 
 	sudo mkdir -p /var/cache/led-matrix-now-playing
 	sudo chown -R root:root /var/cache/led-matrix-now-playing
-	sudo chmod -R 755 /var/cache/led-matrix-now-playing
+	sudo chmod -R 777 /var/cache/led-matrix-now-playing
 
 	git clone https://github.com/hzeller/rpi-rgb-led-matrix.git
 
@@ -30,7 +30,8 @@ install-python:
 install-service:
 	@$(MAKE) stop
 	sudo cp service/rgb_led_matrix.service /etc/systemd/system/
-	echo "Service file copied to /etc/systemd/system/rgb_led_matrix.service"
+	sudo systemctl daemon-reload
+	@echo "Service file copied to /etc/systemd/system/rgb_led_matrix.service"
 
 install-all:
 	@$(MAKE) install-python
