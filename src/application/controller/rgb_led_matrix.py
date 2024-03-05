@@ -8,6 +8,7 @@ from pathlib import Path
 from sys import path
 from typing import TYPE_CHECKING, Any
 
+from dotenv import load_dotenv
 from paho.mqtt.publish import single
 from wg_utilities.loggers import add_stream_handler
 
@@ -30,6 +31,7 @@ from domain.model.led_matrix_now_playing_display import (
 if TYPE_CHECKING:
     from paho.mqtt.client import MQTTMessage
 
+load_dotenv()
 
 LOGGER = getLogger(__name__)
 LOGGER.setLevel(DEBUG)

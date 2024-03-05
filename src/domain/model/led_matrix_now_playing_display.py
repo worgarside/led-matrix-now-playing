@@ -18,8 +18,11 @@ from application.handler.mqtt import (
 )
 from domain.model.artwork_image import NULL_IMAGE, ArtworkImage
 from domain.model.text_label import FONT, FONT_HEIGHT, FONT_WIDTH, Text
+from dotenv import load_dotenv
 from paho.mqtt.publish import multiple
 from wg_utilities.loggers import add_stream_handler
+
+load_dotenv()
 
 LOGGER = getLogger(__name__)
 LOGGER.setLevel(DEBUG)

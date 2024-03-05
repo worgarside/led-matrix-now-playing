@@ -8,8 +8,11 @@ from random import uniform
 from sys import exit as sys_exit
 from time import sleep
 
+from dotenv import load_dotenv
 from paho.mqtt.client import Client
 from wg_utilities.loggers import add_stream_handler
+
+load_dotenv()
 
 LOGGER = getLogger(__name__)
 LOGGER.setLevel(DEBUG)
