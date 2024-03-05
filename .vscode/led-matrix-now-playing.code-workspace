@@ -6,6 +6,10 @@
 		{
 			"name": "SSH FS - MtrxPi",
 			"uri": "ssh://mtrxpi/home/pi/led-matrix-now-playing"
+		},
+		{
+			"name": "SSH FS - MtrxPi Home",
+			"uri": "ssh://mtrxpi/home/pi"
 		}
 	],
 	"settings": {
