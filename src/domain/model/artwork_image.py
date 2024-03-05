@@ -23,7 +23,7 @@ add_stream_handler(LOGGER)
 class ArtworkImage:
     """Class for the creation, caching, and management of artwork images."""
 
-    ARTWORK_DIR: ClassVar[Path] = Path.home() / "crt_artwork"
+    ARTWORK_DIR: ClassVar[Path] = Path.cwd() / "crt_artwork"
     ALPHANUM_PATTERN: ClassVar[Pattern[str]] = compile_regex(r"[\W_]+")
 
     def __init__(
