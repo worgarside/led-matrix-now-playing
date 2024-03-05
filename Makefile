@@ -2,7 +2,8 @@ include .env
 export
 
 clean:
-	rm -rf .venv
+	sudo rm -rf .venv
+	sudo rm -rf rpi-rgb-led-matrix
 
 create:
 	virtualenv -p 3.11 .venv
