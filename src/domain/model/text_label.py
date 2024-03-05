@@ -17,6 +17,7 @@ try:
 except ImportError as exc:
     if sys.platform == "linux":
         raise
+
     LOGGER.warning("Could not import `rgbmatrix`, using emulator instead: %s", repr(exc))
 
     from RGBMatrixEmulator.graphics import Color, Font  # type: ignore[import-untyped]
