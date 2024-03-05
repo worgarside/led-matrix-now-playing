@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import sys
 from json import dumps
 from logging import DEBUG, getLogger
 from math import ceil
+from pathlib import Path
 from threading import Thread
 from time import sleep, time
 from typing import ClassVar, Literal, TypedDict
@@ -22,6 +24,8 @@ from dotenv import load_dotenv
 from paho.mqtt.publish import multiple
 from wg_utilities.loggers import add_stream_handler
 
+sys.path.append(str(Path(__file__).absolute().parents[2]))
+
 load_dotenv()
 
 LOGGER = getLogger(__name__)
@@ -29,7 +33,7 @@ LOGGER.setLevel(DEBUG)
 add_stream_handler(LOGGER)
 
 try:
-    from rgbmatrix import RGBMatrix, RGBMatrixOptions  # type: ignore[import-not-found]
+    from rgbmatrix import RGBMatrix, RGBMatrixOptions  # type: ignore[attr-defined]
     from rgbmatrix.graphics import DrawText  # type: ignore[import-not-found]
 except ImportError as _rgb_matrix_import_exc:
     LOGGER.warning(
