@@ -30,11 +30,12 @@ LOGGER.setLevel(DEBUG)
 add_stream_handler(LOGGER)
 
 try:
-    from rgbmatrix import RGBMatrix, RGBMatrixOptions  # type: ignore[attr-defined]
+    from rgbmatrix import RGBMatrix, RGBMatrixOptions  # type: ignore[import-not-found]
     from rgbmatrix.graphics import DrawText  # type: ignore[import-not-found]
 except ImportError as _rgb_matrix_import_exc:
     if sys.platform == "linux":
         raise
+
     LOGGER.warning(
         "Could not import `rgbmatrix`, using emulator instead: %s",
         repr(_rgb_matrix_import_exc),
