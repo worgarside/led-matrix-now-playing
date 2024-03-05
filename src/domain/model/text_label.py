@@ -8,8 +8,6 @@ from pathlib import Path
 
 from wg_utilities.loggers import add_stream_handler
 
-sys.path.append(str(Path(__file__).absolute().parents[2]))
-
 LOGGER = getLogger(__name__)
 LOGGER.setLevel(DEBUG)
 add_stream_handler(LOGGER)

@@ -6,7 +6,6 @@ import sys
 from json import dumps
 from logging import DEBUG, getLogger
 from math import ceil
-from pathlib import Path
 from threading import Thread
 from time import sleep, time
 from typing import ClassVar, Literal, TypedDict
@@ -23,8 +22,6 @@ from domain.model.text_label import FONT, FONT_HEIGHT, FONT_WIDTH, Text
 from dotenv import load_dotenv
 from paho.mqtt.publish import multiple
 from wg_utilities.loggers import add_stream_handler
-
-sys.path.append(str(Path(__file__).absolute().parents[2]))
 
 load_dotenv()
 
