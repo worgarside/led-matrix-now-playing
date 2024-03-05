@@ -15,8 +15,8 @@ create:
 
 	git clone https://github.com/hzeller/rpi-rgb-led-matrix.git
 
-	$(MAKE) -C rpi-rgb-led-matrix/bindings/python build-python PYTHON=/home/pi/led-metrix-now-playing/.venv/bin/python
-	$(MAKE) -C rpi-rgb-led-matrix/bindings/python install-python PYTHON=/home/pi/led-metrix-now-playing/.venv/bin/python
+	$(MAKE) -C rpi-rgb-led-matrix/bindings/python build-python PYTHON=/home/pi/led-matrix-now-playing/.venv/bin/python
+	$(MAKE) -C rpi-rgb-led-matrix/bindings/python install-python PYTHON=/home/pi/led-matrix-now-playing/.venv/bin/python
 
 disable:
 	sudo systemctl disable rgb_led_matrix.service
