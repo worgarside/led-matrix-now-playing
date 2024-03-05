@@ -6,7 +6,6 @@ import sys
 from logging import DEBUG, getLogger
 from pathlib import Path
 
-from wg_utilities.exceptions import on_exception
 from wg_utilities.loggers import add_stream_handler
 
 LOGGER = getLogger(__name__)
@@ -43,7 +42,6 @@ class Text:
     DEFAULT_TEXT_COLOR = Color(255, 255, 255)  # white
     CLEAR_TEXT_COLOR = Color()  # black
 
-    @on_exception()
     def __init__(
         self,
         content: str,
@@ -61,7 +59,6 @@ class Text:
 
         self._current_x_pos = self.original_x_pos
 
-    @on_exception()
     def get_next_x_pos(self, *, reference_only: bool = False) -> int:
         """Get the next X position for the text.
 
@@ -91,7 +88,6 @@ class Text:
 
         return next_x_pos
 
-    @on_exception()
     def reset_x_pos(self) -> None:
         """Reset the x position of the text to the original position."""
 

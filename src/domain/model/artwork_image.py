@@ -14,7 +14,6 @@ from typing import ClassVar, Final
 from PIL.Image import Image, Resampling
 from PIL.Image import open as open_image
 from requests import get
-from wg_utilities.exceptions import on_exception
 from wg_utilities.functions import force_mkdir
 from wg_utilities.loggers import add_stream_handler
 
@@ -31,7 +30,6 @@ class ArtworkImage:
     )
     ALPHANUM_PATTERN: ClassVar[Pattern[str]] = compile_regex(r"[\W_]+")
 
-    @on_exception()
     def __init__(
         self,
         album: str,
@@ -55,7 +53,6 @@ class ArtworkImage:
             )
             cache_thread.start()
 
-    @on_exception()
     def _cache_image(self, size: int) -> None:
         """Cache the image in memory for future use.
 
@@ -74,7 +71,6 @@ class ArtworkImage:
         LOGGER.debug("Cache complete, setting cache_in_progress to False")
         self.cache_in_progress = False
 
-    @on_exception()
     def _get_artwork_pil_image(
         self, size: int | None = None, *, ignore_cache: bool = False
     ) -> Image:
@@ -106,7 +102,6 @@ class ArtworkImage:
 
         return pil_image
 
-    @on_exception()
     def download(self) -> bytes:
         """Download the image from the URL to store it locally for future use."""
 
@@ -134,7 +129,6 @@ class ArtworkImage:
 
         return artwork_bytes
 
-    @on_exception()
     def get_image(self, size: int | None = None, *, ignore_cache: bool = False) -> Image:
         """Return the image as a PIL Image object, with optional resizing.
 
