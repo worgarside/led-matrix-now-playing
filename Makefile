@@ -1,6 +1,9 @@
 include .env
 export
 
+clean:
+	rm -rf .venv
+
 create:
 	virtualenv -p 3.11 .venv
 	$(MAKE) install-all
@@ -8,6 +11,11 @@ create:
 	sudo mkdir -p /var/cache/led-matrix-now-playing
 	sudo chown -R root:root /var/cache/led-matrix-now-playing
 	sudo chmod -R 755 /var/cache/led-matrix-now-playing
+
+	git clone https://github.com/hzeller/rpi-rgb-led-matrix.git
+
+	$(MAKE) -C rpi-rgb-led-matrix/bindings/python build-python PYTHON=$(which python)
+	$(MAKE) -C rpi-rgb-led-matrix/bindings/python install-python PYTHON=$(which python)
 
 disable:
 	sudo systemctl disable rgb_led_matrix.service
