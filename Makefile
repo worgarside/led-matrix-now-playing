@@ -26,7 +26,7 @@ install-all:
 	@$(MAKE) install-service
 
 run:
-	sudo .venv/bin/python src/application/controller/rgb_led_matrix.py
+	sudo python src/application/controller/rgb_led_matrix.py
 
 start:
 	sudo systemctl start rgb_led_matrix.service
