@@ -52,7 +52,7 @@ class LedMatrixOptionsInfo(TypedDict):
     rows: int
     brightness: int
     gpio_slowdown: int
-    hardware_mapping: Literal["adafruit-hat"]
+    hardware_mapping: Literal["adafruit-hat-pwm"]
     inverse_colors: bool
     led_rgb_sequence: Literal["RGB"]
     show_refresh_rate: bool
@@ -84,7 +84,7 @@ class LedMatrixNowPlayingDisplay:
         "rows": 64,
         "brightness": 80,
         "gpio_slowdown": 4,
-        "hardware_mapping": "adafruit-hat",
+        "hardware_mapping": "adafruit-hat-pwm",
         "inverse_colors": False,
         "led_rgb_sequence": "RGB",
         "show_refresh_rate": False,
