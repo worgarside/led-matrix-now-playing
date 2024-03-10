@@ -87,7 +87,6 @@ repos:
     rev: v1.10.0
     hooks:
       - id: python-check-blanket-type-ignore
-      - id: python-use-type-annotations
 
   - repo: https://github.com/codespell-project/codespell
     rev: v2.2.6

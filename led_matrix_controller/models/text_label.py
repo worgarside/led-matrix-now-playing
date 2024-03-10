@@ -7,20 +7,22 @@ from pathlib import Path
 
 from wg_utilities.loggers import add_stream_handler
 
-from src import Color, Font
+from led_matrix_controller.utils import const
+
+from ._rgbmatrix import Color, Font
 
 LOGGER = getLogger(__name__)
 LOGGER.setLevel(DEBUG)
 add_stream_handler(LOGGER)
 
 
-FONT_WIDTH = 5
-FONT_HEIGHT = 7
-SCROLL_INCREMENT_DISTANCE = 2 * FONT_WIDTH
 FONT = Font()
 FONT.LoadFont(
     str(
-        Path(__file__).parents[3] / "assets" / "fonts" / f"{FONT_WIDTH}x{FONT_HEIGHT}.bdf"
+        Path(__file__).parents[2]
+        / "assets"
+        / "fonts"
+        / f"{const.FONT_WIDTH}x{const.FONT_HEIGHT}.bdf"
     )
 )
 
@@ -65,7 +67,7 @@ class Text:
         if not self.scrollable:
             return self.original_x_pos
 
-        next_x_pos = self._current_x_pos - SCROLL_INCREMENT_DISTANCE
+        next_x_pos = self._current_x_pos - const.SCROLL_INCREMENT_DISTANCE
 
         if next_x_pos <= -2 / 3 * self.label_len:
             # If 2/3 of the label has scrolled off the screen, reset to the original X
@@ -106,7 +108,9 @@ class Text:
 
         if self.matrix_width:
             # Set the `scrollable` attribute based on the new display_content's length
-            self.scrollable = len(self.original_content) * FONT_WIDTH > self.matrix_width
+            self.scrollable = (
+                len(self.original_content) * const.FONT_WIDTH > self.matrix_width
+            )
         else:
             LOGGER.warning("Matrix width not set, defaulting scrollable to False")
             self.scrollable = False
@@ -121,7 +125,7 @@ class Text:
             int: length of the text in pixels
         """
 
-        return len(self.display_content) * FONT_WIDTH
+        return len(self.display_content) * const.FONT_WIDTH
 
     @property
     def matrix_width(self) -> int | None:
@@ -156,14 +160,16 @@ class Text:
             # to align with the left side of the screen. The SCROLL_INCREMENT_DISTANCE
             # is added to account for the first incremental movement of the text within
             # the `get_next_x_pos` method.
-            return (-3 * FONT_WIDTH) + SCROLL_INCREMENT_DISTANCE
+            return (-3 * const.FONT_WIDTH) + const.SCROLL_INCREMENT_DISTANCE
 
         if not self.matrix_width:
             LOGGER.warning("Matrix width not set, defaulting original x position to 10")
             return 10
 
         # Otherwise center the text on the screen
-        return int((self.matrix_width - (len(self.original_content) * FONT_WIDTH)) / 2)
+        return int(
+            (self.matrix_width - (len(self.original_content) * const.FONT_WIDTH)) / 2
+        )
 
     def __len__(self) -> int:
         """Return the number of characters in the text.

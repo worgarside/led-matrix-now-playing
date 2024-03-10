@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from logging import DEBUG, getLogger
-from os import environ, getenv
 from random import uniform
 from sys import exit as sys_exit
 from time import sleep
@@ -11,22 +10,15 @@ from time import sleep
 from paho.mqtt.client import Client
 from wg_utilities.loggers import add_stream_handler
 
+from .const import MQTT_HOST, MQTT_PASSWORD, MQTT_USERNAME
+
 LOGGER = getLogger(__name__)
 LOGGER.setLevel(DEBUG)
 add_stream_handler(LOGGER)
 
 
 MQTT_CLIENT = Client()
-MQTT_USERNAME = environ["MQTT_USERNAME"]
-MQTT_PASSWORD = environ["MQTT_PASSWORD"]
 MQTT_CLIENT.username_pw_set(username=MQTT_USERNAME, password=MQTT_PASSWORD)
-MQTT_HOST = getenv("MQTT_HOST", "homeassistant.local")
-
-HA_LED_MATRIX_PAYLOAD_TOPIC = "/homeassistant/led_matrix/display"
-HA_LED_MATRIX_BRIGHTNESS_TOPIC = "/homeassistant/led_matrix/brightness"
-HA_LED_MATRIX_STATE_TOPIC = "/homeassistant/led_matrix/state"
-HA_MTRXPI_CONTENT_TOPIC = "/homeassistant/mtrxpi/content"
-HA_FORCE_UPDATE_TOPIC = "/home-assistant/script/mtrxpi_update_display/run"
 
 
 def on_connect(

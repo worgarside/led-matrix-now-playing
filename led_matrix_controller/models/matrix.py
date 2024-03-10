@@ -12,16 +12,11 @@ from typing import ClassVar, Literal, TypedDict
 from paho.mqtt.publish import multiple
 from wg_utilities.loggers import add_stream_handler
 
-from src import DrawText, RGBMatrix, RGBMatrixOptions
-from src.application.handler.mqtt import (
-    HA_LED_MATRIX_STATE_TOPIC,
-    HA_MTRXPI_CONTENT_TOPIC,
-    MQTT_HOST,
-    MQTT_PASSWORD,
-    MQTT_USERNAME,
-)
-from src.domain.model.artwork_image import NULL_IMAGE, ArtworkImage
-from src.domain.model.text_label import FONT, FONT_HEIGHT, FONT_WIDTH, Text
+from led_matrix_controller.utils import const
+
+from ._rgbmatrix import DrawText, RGBMatrix, RGBMatrixOptions
+from .artwork_image import NULL_IMAGE, ArtworkImage
+from .text_label import FONT, Text
 
 LOGGER = getLogger(__name__)
 LOGGER.setLevel(DEBUG)
@@ -85,12 +80,12 @@ class Matrix:
         self.canvas = self.matrix.CreateFrameCanvas()
 
         artist_y_pos = self.matrix.height - 2
-        media_title_y_pos = artist_y_pos - (FONT_HEIGHT + 1)
+        media_title_y_pos = artist_y_pos - (const.FONT_HEIGHT + 1)
 
-        self.image_size = media_title_y_pos - (FONT_HEIGHT + 3)
+        self.image_size = media_title_y_pos - (const.FONT_HEIGHT + 3)
         self.image_x_pos: int = int((self.matrix.width - self.image_size) / 2)
         self.image_y_pos: int = int(
-            (self.matrix.height - (FONT_HEIGHT * 2 + 2) - self.image_size) / 2
+            (self.matrix.height - (const.FONT_HEIGHT * 2 + 2) - self.image_size) / 2
         )
 
         self._media_title: Text = Text(
@@ -123,7 +118,7 @@ class Matrix:
             0,
             text.y_pos,
             text.CLEAR_TEXT_COLOR,
-            "█" * ceil(self.matrix.width / FONT_WIDTH),
+            "█" * ceil(self.matrix.width / const.FONT_WIDTH),
         )
         if update_canvas:
             self.matrix.SwapOnVSync(self.canvas)
@@ -185,7 +180,7 @@ class Matrix:
         multiple(
             msgs=[
                 {
-                    "topic": HA_LED_MATRIX_STATE_TOPIC,
+                    "topic": const.HA_LED_MATRIX_STATE_TOPIC,
                     "payload": (
                         "ON"
                         if any(
@@ -199,12 +194,12 @@ class Matrix:
                     ),
                 },
                 {
-                    "topic": HA_MTRXPI_CONTENT_TOPIC,
+                    "topic": const.HA_MTRXPI_CONTENT_TOPIC,
                     "payload": dumps(self.home_assistant_payload),
                 },
             ],
-            auth={"username": MQTT_USERNAME, "password": MQTT_PASSWORD},
-            hostname=MQTT_HOST,
+            auth={"username": const.MQTT_USERNAME, "password": const.MQTT_PASSWORD},
+            hostname=const.MQTT_HOST,
         )
 
         self._pending_ha_updates = {
