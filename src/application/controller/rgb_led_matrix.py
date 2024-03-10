@@ -4,16 +4,12 @@ from __future__ import annotations
 
 from json import dumps, loads
 from logging import DEBUG, getLogger
-from pathlib import Path
-from sys import path
 from typing import TYPE_CHECKING, Any
 
 from paho.mqtt.publish import single
 from wg_utilities.loggers import add_stream_handler
 
-path.append(str(Path(__file__).parents[2]))
-
-from application.handler.mqtt import (
+from src.application.handler.mqtt import (
     HA_FORCE_UPDATE_TOPIC,
     HA_LED_MATRIX_BRIGHTNESS_TOPIC,
     HA_LED_MATRIX_PAYLOAD_TOPIC,
@@ -22,9 +18,9 @@ from application.handler.mqtt import (
     MQTT_PASSWORD,
     MQTT_USERNAME,
 )
-from domain.model.artwork_image import NULL_IMAGE, ArtworkImage
-from domain.model.led_matrix_now_playing_display import (
-    LedMatrixNowPlayingDisplay,
+from src.domain.model.artwork_image import NULL_IMAGE, ArtworkImage
+from src.domain.model.matrix import (
+    Matrix,
 )
 
 if TYPE_CHECKING:
@@ -36,7 +32,7 @@ LOGGER.setLevel(DEBUG)
 add_stream_handler(LOGGER)
 
 
-LED_MATRIX = LedMatrixNowPlayingDisplay()
+LED_MATRIX = Matrix()
 
 NONE_VALUES = (
     None,

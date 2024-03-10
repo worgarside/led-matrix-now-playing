@@ -2,25 +2,17 @@
 
 from __future__ import annotations
 
-import sys
 from logging import DEBUG, getLogger
 from pathlib import Path
 
 from wg_utilities.loggers import add_stream_handler
 
+from src import Color, Font
+
 LOGGER = getLogger(__name__)
 LOGGER.setLevel(DEBUG)
 add_stream_handler(LOGGER)
 
-try:
-    from rgbmatrix.graphics import Color, Font  # type: ignore[import-not-found]
-except ImportError as exc:
-    if sys.platform == "linux":
-        raise
-
-    LOGGER.warning("Could not import `rgbmatrix`, using emulator instead: %s", repr(exc))
-
-    from RGBMatrixEmulator.graphics import Color, Font  # type: ignore[import-untyped]
 
 FONT_WIDTH = 5
 FONT_HEIGHT = 7
@@ -28,10 +20,7 @@ SCROLL_INCREMENT_DISTANCE = 2 * FONT_WIDTH
 FONT = Font()
 FONT.LoadFont(
     str(
-        Path(__file__).absolute().parents[3]
-        / "assets"
-        / "fonts"
-        / f"{FONT_WIDTH}x{FONT_HEIGHT}.bdf"
+        Path(__file__).parents[3] / "assets" / "fonts" / f"{FONT_WIDTH}x{FONT_HEIGHT}.bdf"
     )
 )
 
@@ -101,7 +90,7 @@ class Text:
             str: the display content of the text.
         """
         if self.scrollable:
-            return ("   " + self.original_content + "   ") * 3
+            return f"   {self.original_content}   " * 3
 
         return self.original_content
 
