@@ -8,9 +8,9 @@ try:
         Font,
     )
 except ImportError as exc:
-    from sys import platform
+    from socket import gethostname
 
-    if platform == "linux":
+    if gethostname() != "mtrxpi":
         raise
 
     from logging import warning
