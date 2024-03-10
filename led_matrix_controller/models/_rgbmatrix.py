@@ -10,7 +10,7 @@ try:
 except ImportError as exc:
     from socket import gethostname
 
-    if gethostname() != "mtrxpi":
+    if gethostname() == "mtrxpi":
         raise
 
     from logging import warning

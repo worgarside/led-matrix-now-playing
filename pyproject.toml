@@ -5,7 +5,6 @@ description = "Updates an RGB LED matrix with payloads from an MQTT topic"
 authors = ["Will Garside <worgarside@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "led_matrix_now_playing"}]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
@@ -21,6 +20,7 @@ rgbmatrixemulator = "^0.11.3"
 
 [tool.mypy]
 exclude = ["_local_sandbox"]
+mypy_path = "led_matrix_controller"
 follow_imports = "normal"
 disallow_any_generics = true
 disallow_subclassing_any = true
