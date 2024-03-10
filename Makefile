@@ -30,10 +30,8 @@ install-python:
 	.venv/bin/pip install -r requirements.txt
 
 install-service:
-	@$(MAKE) stop
 	sudo cp service/led_matrix_controller.service /etc/systemd/system/
 	sudo systemctl daemon-reload
-	@echo "Service file copied to /etc/systemd/system/led_matrix_controller.service"
 
 install-all:
 	@$(MAKE) install-python
