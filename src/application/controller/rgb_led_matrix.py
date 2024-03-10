@@ -19,9 +19,7 @@ from src.application.handler.mqtt import (
     MQTT_USERNAME,
 )
 from src.domain.model.artwork_image import NULL_IMAGE, ArtworkImage
-from src.domain.model.matrix import (
-    Matrix,
-)
+from src.domain.model.matrix import Matrix
 
 if TYPE_CHECKING:
     from paho.mqtt.client import MQTTMessage
