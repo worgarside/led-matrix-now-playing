@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 from json import dumps
 from logging import DEBUG, getLogger
 from math import ceil
@@ -10,39 +9,23 @@ from threading import Thread
 from time import sleep, time
 from typing import ClassVar, Literal, TypedDict
 
-from application.handler.mqtt import (
+from paho.mqtt.publish import multiple
+from wg_utilities.loggers import add_stream_handler
+
+from src import DrawText, RGBMatrix, RGBMatrixOptions
+from src.application.handler.mqtt import (
     HA_LED_MATRIX_STATE_TOPIC,
     HA_MTRXPI_CONTENT_TOPIC,
     MQTT_HOST,
     MQTT_PASSWORD,
     MQTT_USERNAME,
 )
-from domain.model.artwork_image import NULL_IMAGE, ArtworkImage
-from domain.model.text_label import FONT, FONT_HEIGHT, FONT_WIDTH, Text
-from paho.mqtt.publish import multiple
-from wg_utilities.loggers import add_stream_handler
+from src.domain.model.artwork_image import NULL_IMAGE, ArtworkImage
+from src.domain.model.text_label import FONT, FONT_HEIGHT, FONT_WIDTH, Text
 
 LOGGER = getLogger(__name__)
 LOGGER.setLevel(DEBUG)
 add_stream_handler(LOGGER)
-
-try:
-    from rgbmatrix import RGBMatrix, RGBMatrixOptions  # type: ignore[import-not-found]
-    from rgbmatrix.graphics import DrawText  # type: ignore[import-not-found]
-except ImportError as _rgb_matrix_import_exc:
-    if sys.platform == "linux":
-        raise
-
-    LOGGER.warning(
-        "Could not import `rgbmatrix`, using emulator instead: %s",
-        repr(_rgb_matrix_import_exc),
-    )
-
-    from RGBMatrixEmulator import (  # type: ignore[import-untyped]
-        RGBMatrix,
-        RGBMatrixOptions,
-    )
-    from RGBMatrixEmulator.graphics import DrawText  # type: ignore[import-untyped]
 
 
 class LedMatrixOptionsInfo(TypedDict):
@@ -76,7 +59,7 @@ class HAPayloadInfo(TypedDict):
     album_artwork_url: str | None
 
 
-class LedMatrixNowPlayingDisplay:
+class Matrix:
     """Class for displaying track information on an RGB LED Matrix."""
 
     OPTIONS: ClassVar[LedMatrixOptionsInfo] = {
@@ -105,10 +88,10 @@ class LedMatrixNowPlayingDisplay:
         media_title_y_pos = artist_y_pos - (FONT_HEIGHT + 1)
 
         self.image_size = media_title_y_pos - (FONT_HEIGHT + 3)
-        self.image_x_pos = (self.matrix.width - self.image_size) / 2
-        self.image_y_pos = (
-            self.matrix.height - (FONT_HEIGHT * 2 + 2) - self.image_size
-        ) / 2
+        self.image_x_pos: int = int((self.matrix.width - self.image_size) / 2)
+        self.image_y_pos: int = int(
+            (self.matrix.height - (FONT_HEIGHT * 2 + 2) - self.image_size) / 2
+        )
 
         self._media_title: Text = Text(
             "-", media_title_y_pos, matrix_width=self.matrix.width

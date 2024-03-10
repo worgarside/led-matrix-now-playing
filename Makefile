@@ -53,6 +53,6 @@ tail:
 
 update:
 	git add .
-	git stash save "Stash before update @ $(shell date)"
+	git stash save "Stash before update @ $$(shell date)"
 	git pull --prune
 	@$(MAKE) install-all
