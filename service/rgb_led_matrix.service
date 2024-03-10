@@ -9,9 +9,9 @@ Type=simple
 Restart=always
 RestartSec=5
 User=root
-ExecStart=/home/pi/led-matrix-now-playing/.venv/bin/python /home/pi/led-matrix-now-playing/src/application/controller/rgb_led_matrix.py
-EnvironmentFile=/home/pi/led-matrix-now-playing/.env
-WorkingDirectory=/home/pi/led-matrix-now-playing
+ExecStart=/home/pi/led-matrix-controller/.venv/bin/python /home/pi/led-matrix-controller/led_matrix_controller/main.py
+EnvironmentFile=/home/pi/led-matrix-controller/.env
+WorkingDirectory=/home/pi/led-matrix-controller
 
 [Install]
 WantedBy=multi-user.target
