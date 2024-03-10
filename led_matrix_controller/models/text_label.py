@@ -5,9 +5,8 @@ from __future__ import annotations
 from logging import DEBUG, getLogger
 from pathlib import Path
 
+from utils import const
 from wg_utilities.loggers import add_stream_handler
-
-from led_matrix_controller.utils import const
 
 from ._rgbmatrix import Color, Font
 

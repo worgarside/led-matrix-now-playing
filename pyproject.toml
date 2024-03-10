@@ -20,6 +20,7 @@ rgbmatrixemulator = "^0.11.3"
 
 [tool.mypy]
 exclude = ["_local_sandbox"]
+mypy_path = "led_matrix_controller"
 follow_imports = "normal"
 disallow_any_generics = true
 disallow_subclassing_any = true

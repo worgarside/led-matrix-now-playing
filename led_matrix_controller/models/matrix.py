@@ -10,9 +10,8 @@ from time import sleep, time
 from typing import ClassVar, Literal, TypedDict
 
 from paho.mqtt.publish import multiple
+from utils import const
 from wg_utilities.loggers import add_stream_handler
-
-from led_matrix_controller.utils import const
 
 from ._rgbmatrix import DrawText, RGBMatrix, RGBMatrixOptions
 from .artwork_image import NULL_IMAGE, ArtworkImage
