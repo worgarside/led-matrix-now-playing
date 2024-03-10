@@ -21,35 +21,35 @@ create:
 	sudo rm -rf rpi-rgb-led-matrix
 
 disable:
-	sudo systemctl disable rgb_led_matrix.service
+	sudo systemctl disable led_matrix_controller.service
 
 enable:
-	sudo systemctl enable rgb_led_matrix.service
+	sudo systemctl enable led_matrix_controller.service
 
 install-python:
 	.venv/bin/pip install -r requirements.txt
 
 install-service:
 	@$(MAKE) stop
-	sudo cp service/rgb_led_matrix.service /etc/systemd/system/
+	sudo cp service/led_matrix_controller.service /etc/systemd/system/
 	sudo systemctl daemon-reload
-	@echo "Service file copied to /etc/systemd/system/rgb_led_matrix.service"
+	@echo "Service file copied to /etc/systemd/system/led_matrix_controller.service"
 
 install-all:
 	@$(MAKE) install-python
 	@$(MAKE) install-service
 
 run:
-	sudo .venv/bin/python src/application/controller/rgb_led_matrix.py
+	sudo .venv/bin/python src/application/controller/led_matrix_controller.py
 
 start:
-	sudo systemctl start rgb_led_matrix.service
+	sudo systemctl start led_matrix_controller.service
 
 stop:
-	sudo systemctl stop rgb_led_matrix.service
+	sudo systemctl stop led_matrix_controller.service
 
 tail:
-	sudo journalctl -u rgb_led_matrix.service -f -n 20
+	sudo journalctl -u led_matrix_controller.service -f -n 20
 
 update:
 	git add .
