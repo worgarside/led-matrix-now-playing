@@ -4,13 +4,29 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from utils.ca import Condition, Grid, Rule, State
+import pytest
+from utils.cellular_automata.ca import Condition, Grid, Rule, State
 
 if TYPE_CHECKING:
     from pytest_codspeed.plugin import BenchmarkFixture  # type: ignore[import-untyped]
 
 
-def test_ca(benchmark: BenchmarkFixture) -> None:
+@pytest.mark.parametrize(
+    (
+        "height",
+        "limit",
+    ),
+    [
+        (8, 100),
+        (16, 100),
+        (32, 100),
+        (8, 1000),
+        (16, 1000),
+        (32, 1000),
+        (8, 10000),
+    ],
+)
+def test_ca(benchmark: BenchmarkFixture, height: int, limit: int) -> None:
     """Benchmark the CA."""
     raindrop_generator = Rule(
         condition=lambda c: c.is_top and Condition.percentage_chance(0.01)(c),
@@ -95,7 +111,7 @@ def test_ca(benchmark: BenchmarkFixture) -> None:
     )
 
     grid = Grid(
-        32,
+        height,
         rules={
             State.NULL: [
                 raindrop_generator,
@@ -113,4 +129,4 @@ def test_ca(benchmark: BenchmarkFixture) -> None:
         },
     )
 
-    benchmark(lambda: grid.run(limit=1000, time_period=0))
+    benchmark(lambda: grid.run(limit=limit, time_period=0))
