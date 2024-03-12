@@ -62,11 +62,8 @@ class Cell:
         self, x: int, y: int, *, no_exist_ok: bool = True
     ) -> Cell | None:
         """Return the cell at the given relative coordinates. If the cell does not exist, return None."""
-        if cell := self.grid.get(self.x + x, self.y + y):
+        if (cell := self.grid.get(self.x + x, self.y + y)) or no_exist_ok:
             return cell
-
-        if no_exist_ok:
-            return None
 
         raise ValueError(f"Cell at {self.x + x}, {self.y + y} does not exist")
 
