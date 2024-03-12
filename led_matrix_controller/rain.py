@@ -1,33 +1,19 @@
-"""Benchmark the pre-commit hooks."""
+"""Rain simulation."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-import pytest
 from utils.cellular_automata.ca import Condition, Grid, Rule, State
 
-if TYPE_CHECKING:
-    from pytest_codspeed.plugin import BenchmarkFixture  # type: ignore[import-untyped]
+
+def print_with_newlines(string: str, /) -> None:
+    """Print the string with newlines before and after."""
+    print()
+    print(string)
+    print()
 
 
-@pytest.mark.parametrize(
-    (
-        "height",
-        "limit",
-    ),
-    [
-        (8, 100),
-        (16, 100),
-        (32, 100),
-        (8, 1000),
-        (16, 1000),
-        (32, 1000),
-        (8, 10000),
-    ],
-)
-def test_ca(benchmark: BenchmarkFixture, height: int, limit: int) -> None:
-    """Benchmark the CA."""
+def main() -> None:
+    """Run the simulation."""
     raindrop_generator = Rule(
         condition=lambda c: c.is_top and Condition.percentage_chance(0.01)(c),
         assign=State.RAINDROP,
@@ -111,7 +97,7 @@ def test_ca(benchmark: BenchmarkFixture, height: int, limit: int) -> None:
     )
 
     grid = Grid(
-        height,
+        32,
         rules={
             State.NULL: [
                 raindrop_generator,
@@ -127,6 +113,11 @@ def test_ca(benchmark: BenchmarkFixture, height: int, limit: int) -> None:
             State.SPLASH_LEFT: [remove_splash_low, remove_splash_high],
             State.SPLASH_RIGHT: [remove_splash_low, remove_splash_high],
         },
+        runner_callback=print_with_newlines,
     )
 
-    benchmark(lambda: grid.run(limit=limit, time_period=0))
+    grid.run(limit=1000, time_period=0.035)
+
+
+if __name__ == "__main__":
+    main()
