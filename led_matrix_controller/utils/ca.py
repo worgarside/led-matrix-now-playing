@@ -228,6 +228,7 @@ class Grid:
     width: int = -1
 
     frame_index: int = 0
+    runner_callback: Callable[[str], None] | None = None
 
     rules: dict[State, Collection[Rule]] = field(default_factory=dict)
 
@@ -277,8 +278,8 @@ class Grid:
     def run(self, limit: int, time_period: float) -> None:
         """Run the simulation."""
         for i, fr in enumerate(self.frames()):
-            print(fr)
-            print("\n\n")
+            if self.runner_callback:
+                self.runner_callback(fr)
 
             if i > limit:
                 break
@@ -407,6 +408,7 @@ def main() -> None:
             State.SPLASH_LEFT: [remove_splash_low, remove_splash_high],
             State.SPLASH_RIGHT: [remove_splash_low, remove_splash_high],
         },
+        runner_callback=print,
     )
 
     grid.run(limit=1000, time_period=0.035)

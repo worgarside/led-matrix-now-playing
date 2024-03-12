@@ -16,7 +16,17 @@ paho-mqtt = "^1.6.1"
 [tool.poetry.group.dev.dependencies]
 rgbmatrixemulator = "^0.11.3"
 
+[tool.poetry.group.test.dependencies]
+pytest-codspeed = "^2.2.0"
+
 #  Tool Configs
+
+[tool.pytest.ini_options]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+xfail_strict = true
+log_cli_level = "warning"
+pythonpath = ["led_matrix_controller"]
+testpaths = ["tests"]
 
 [tool.mypy]
 exclude = ["_local_sandbox"]

@@ -22,6 +22,8 @@ repos:
           - --strict
           - --show-error-codes
         additional_dependencies:
+          - pytest==8.1.1
+          - pytest-codspeed==2.2.0
           - types-requests
           - types-paho-mqtt
           - types-Pillow
