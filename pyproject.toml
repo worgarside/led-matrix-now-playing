@@ -19,8 +19,6 @@ rgbmatrixemulator = "^0.11.3"
 [tool.poetry.group.test.dependencies]
 pytest-codspeed = "^2.2.0"
 
-#  Tool Configs
-
 [tool.pytest.ini_options]
 addopts = ["-ra", "--strict-markers", "--strict-config"]
 xfail_strict = true
