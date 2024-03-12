@@ -256,16 +256,15 @@ class Grid:
             next_frame_number = self.frame_index + 1
             for row in self.rows:
                 for cell in row:
-                    applicable_rules = [
-                        rule
-                        for rule in self.rules.get(cell.state, ())
-                        if rule.is_applicable(cell)  # type: ignore[no-untyped-call]
-                    ]
+                    try:
+                        for rule in self.rules[cell.state]:
+                            if rule.is_applicable(cell):  # type: ignore[no-untyped-call]
+                                rule(cell)
+                                break
+                    except KeyError:
+                        pass
 
                     cell.previous_frame_state = cell.state
-
-                    if applicable_rules:
-                        applicable_rules[0](cell)
 
                     cell.frame_index = next_frame_number
 
