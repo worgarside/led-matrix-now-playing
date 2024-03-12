@@ -113,4 +113,4 @@ def test_ca(benchmark: BenchmarkFixture) -> None:
         },
     )
 
-    benchmark(lambda: grid.run(limit=1000, time_period=0.035))
+    benchmark(lambda: grid.run(limit=1000, time_period=0))
