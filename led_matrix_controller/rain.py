@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from time import time
 from typing import Callable
 
 from utils.cellular_automata.ca import Condition, Grid, Rule, State
@@ -126,5 +127,21 @@ def main() -> None:
     grid.run(limit=1000, time_period=0.035)
 
 
+def rough_benchmark() -> None:
+    """Rough benchmark of the rain simulation."""
+    grid = define_grid(height=32, runner_callback=None)
+
+    times = []
+
+    for _ in range(10):
+        start = time()
+        grid.run(limit=1000, time_period=0)
+        times.append(time() - start)
+
+        print(f"Rough benchmark: {times[-1]:.2f} seconds")
+
+    print(f"Average time: {sum(times) / len(times):.2f} seconds")
+
+
 if __name__ == "__main__":
-    main()
+    rough_benchmark()
