@@ -150,6 +150,10 @@ class Cell:
         return self.x == other.x and self.y == other.y and self.grid == other.grid
 
 
+def _true(_: Cell) -> Literal[True]:
+    return True
+
+
 class Rule:
     """A rule that can be applied to a cell."""
 
@@ -159,13 +163,12 @@ class Rule:
         condition: Condition | Condition.Function | None = None,
         assign: State = State._UNSET,
     ) -> None:
-        self.condition = condition
         self.assign = assign
 
-        if self.condition is not None:
-            self.is_applicable = lambda c: self.condition(c)
+        if condition:
+            self.is_applicable: Condition.Function = lambda cell: condition(cell)
         else:
-            self.is_applicable = lambda _: True
+            self.is_applicable = _true
 
     def __call__(self, cell: Cell) -> Any:
         """Apply the rule to the cell."""
@@ -258,7 +261,7 @@ class Grid:
                 for cell in row:
                     try:
                         for rule in self.rules[cell.state]:
-                            if rule.is_applicable(cell):  # type: ignore[no-untyped-call]
+                            if rule.is_applicable(cell):
                                 rule(cell)
                                 break
                     except KeyError:
