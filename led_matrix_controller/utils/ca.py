@@ -255,11 +255,11 @@ class Grid:
 
     def run(self, limit: int, time_period: float) -> None:
         """Run the simulation."""
-        for fr in self.frames():
+        for i, fr in enumerate(self.frames()):
             print(fr)
             print("\n\n")
 
-            if self.frame_index > limit:
+            if i > limit:
                 break
 
             sleep(time_period)
