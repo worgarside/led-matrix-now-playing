@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from logging import DEBUG, getLogger
-from os import environ
 from random import uniform
 from sys import exit as sys_exit
 from time import sleep
@@ -69,5 +68,5 @@ def on_disconnect(client: Client, userdata: dict[str, object], rc: int) -> None:
 MQTT_CLIENT.on_connect = on_connect  # type: ignore[assignment]
 MQTT_CLIENT.on_disconnect = on_disconnect
 
-if environ["MQTT_USERNAME"] != "test":
+if MQTT_USERNAME != "test":
     MQTT_CLIENT.connect(MQTT_HOST)
