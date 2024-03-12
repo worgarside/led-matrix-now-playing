@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
-from functools import lru_cache
+from functools import cached_property, lru_cache
 from random import random
 from time import sleep
 from typing import Any, Callable, Collection, Generator, Literal, overload
@@ -41,11 +41,6 @@ class Cell:
         self.is_left = self.x == 0
         self.is_right = self.x == self.grid.width - 1
 
-        self.cell_above = self.get_relative_cell(0, -1)
-        self.cell_below = self.get_relative_cell(0, 1)
-        self.cell_left = self.get_relative_cell(-1, 0)
-        self.cell_right = self.get_relative_cell(1, 0)
-
     _state: State = State.NULL
     last_state_change: State = State._UNSET
     previous_frame_state: State = State._UNSET
@@ -74,6 +69,26 @@ class Cell:
             return None
 
         raise ValueError(f"Cell at {self.x + x}, {self.y + y} does not exist")
+
+    @cached_property
+    def cell_above(self) -> Cell | None:
+        """Return the cell above this one. If this is the top cell, return None."""
+        return self.get_relative_cell(0, -1)
+
+    @cached_property
+    def cell_below(self) -> Cell | None:
+        """Return the cell below this one. If this is the bottom cell, return None."""
+        return self.get_relative_cell(0, 1)
+
+    @cached_property
+    def cell_left(self) -> Cell | None:
+        """Return the cell to the left of this one. If this is the leftmost cell, return None."""
+        return self.get_relative_cell(-1, 0)
+
+    @cached_property
+    def cell_right(self) -> Cell | None:
+        """Return the cell to the right of this one. If this is the rightmost cell, return None."""
+        return self.get_relative_cell(1, 0)
 
     def _get_state(self, other: Cell | None) -> State:
         if other is None:
