@@ -16,7 +16,8 @@ paho-mqtt = "^1.6.1"
 [tool.poetry.group.dev.dependencies]
 rgbmatrixemulator = "^0.11.3"
 
-#  Tool Configs
+[tool.poetry.group.test.dependencies]
+pytest-codspeed = "^2.2.0"
 
 [tool.mypy]
 exclude = ["_local_sandbox"]
