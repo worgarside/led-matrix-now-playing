@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Callable
+
 from utils.cellular_automata.ca import Condition, Grid, Rule, State
 
 
@@ -12,8 +14,8 @@ def print_with_newlines(string: str, /) -> None:
     print()
 
 
-def main() -> None:
-    """Run the simulation."""
+def define_grid(*, height: int, runner_callback: Callable[[str], None] | None) -> Grid:
+    """Define the grid and its rules."""
     raindrop_generator = Rule(
         condition=lambda c: c.is_top and Condition.percentage_chance(0.01)(c),
         assign=State.RAINDROP,
@@ -96,8 +98,8 @@ def main() -> None:
         assign=State.SPLASHDROP,
     )
 
-    grid = Grid(
-        32,
+    return Grid(
+        height,
         rules={
             State.NULL: [
                 raindrop_generator,
@@ -113,8 +115,13 @@ def main() -> None:
             State.SPLASH_LEFT: [remove_splash_low, remove_splash_high],
             State.SPLASH_RIGHT: [remove_splash_low, remove_splash_high],
         },
-        runner_callback=print_with_newlines,
+        runner_callback=runner_callback,
     )
+
+
+def main() -> None:
+    """Run the rain simulation."""
+    grid = define_grid(height=32, runner_callback=print_with_newlines)
 
     grid.run(limit=1000, time_period=0.035)
 
