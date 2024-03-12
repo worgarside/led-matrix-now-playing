@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from utils.cellular_automata.ca import Condition, Grid, Rule, State
+from utils.ca import Condition, Grid, Rule, State
 
 if TYPE_CHECKING:
     from pytest_codspeed.plugin import BenchmarkFixture  # type: ignore[import-untyped]
