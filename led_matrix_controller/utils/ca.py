@@ -197,13 +197,22 @@ class Condition:
 
     @lru_cache(maxsize=None)
     @staticmethod
+    def check_height(height: int, /) -> Function:
+        """Return a condition that checks if the cell is at the given height."""
+
+        def _check(cell: Cell) -> bool:
+            if height < 0:
+                return cell.y == cell.grid.height + height
+
+            return cell.y == height
+
+        return _check
+
+    @staticmethod
     def cell_at_height(cell: Cell, height: int, /) -> bool:
         """Return a condition that checks if the cell is at the given height."""
 
-        if height < 0:
-            return cell.y == cell.grid.height + height
-
-        return cell.y == height
+        return Condition.check_height(height)(cell)
 
     @staticmethod
     def percentage_chance(chance: float, /) -> Function:
@@ -372,12 +381,12 @@ def main() -> None:
     )
 
     remove_splash_low = Rule(
-        condition=lambda c: Condition.cell_at_height(c, -2),
+        condition=Condition.check_height(-2),
         assign=State.NULL,
     )
 
     remove_splash_high = Rule(
-        condition=lambda c: Condition.cell_at_height(c, -3),
+        condition=Condition.check_height(-3),
         assign=State.SPLASHDROP,
     )
 
