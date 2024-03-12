@@ -279,7 +279,6 @@ def main() -> None:
     raindrop_generator = Rule(
         conditions=(
             lambda c: c.is_top,
-            lambda c: c.state == State.NULL,
             Condition.percentage_chance(0.01),
         ),
         assign=State.RAINDROP,
@@ -307,7 +306,6 @@ def main() -> None:
 
     splash_left = Rule(
         conditions=[
-            lambda c: c.has_state(State.NULL),
             Condition(
                 lambda c: c.get_relative_cell(1, 1, no_exist_ok=False).has_state(
                     State.RAINDROP
