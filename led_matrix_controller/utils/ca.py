@@ -8,6 +8,7 @@ from functools import cached_property, lru_cache
 from random import random
 from time import sleep
 from typing import Any, Callable, Collection, Generator, Literal, overload
+from uuid import uuid4
 
 
 class State(StrEnum):
@@ -140,6 +141,17 @@ class Cell:
         """Return the string representation of the cell."""
         return self.state
 
+    def __hash__(self) -> int:
+        """Return the hash of the cell."""
+        return hash((self.x, self.y, self.grid))
+
+    def __eq__(self, other: Any) -> bool:
+        """Return whether the cell is equal to another cell."""
+        if not isinstance(other, Cell):
+            return False
+
+        return self.x == other.x and self.y == other.y and self.grid == other.grid
+
 
 class Rule:
     """A rule that can be applied to a cell."""
@@ -147,20 +159,21 @@ class Rule:
     def __init__(
         self,
         *,
-        conditions: Collection[Condition | Condition.Function] = (),
+        condition: Condition | Condition.Function | None = None,
         assign: State = State._UNSET,
     ) -> None:
-        self.conditions = tuple(conditions)
+        self.condition = condition
         self.assign = assign
+
+        if self.condition is not None:
+            self.is_applicable = lambda c: self.condition(c)
+        else:
+            self.is_applicable = lambda _: True
 
     def __call__(self, cell: Cell) -> Any:
         """Apply the rule to the cell."""
         if self.assign is not State._UNSET:
             cell.state = self.assign
-
-    def is_applicable(self, cell: Cell) -> bool:
-        """Return whether the rule is applicable to the cell."""
-        return all(condition(cell) for condition in self.conditions)
 
 
 Rows = tuple[tuple[Cell, ...], ...]
@@ -184,16 +197,13 @@ class Condition:
 
     @lru_cache(maxsize=None)
     @staticmethod
-    def at_height(height: int, /) -> Function:
+    def cell_at_height(cell: Cell, height: int, /) -> bool:
         """Return a condition that checks if the cell is at the given height."""
 
-        def _check_height(cell: Cell) -> bool:
-            if height < 0:
-                return cell.y == cell.grid.height + height
+        if height < 0:
+            return cell.y == cell.grid.height + height
 
-            return cell.y == height
-
-        return _check_height
+        return cell.y == height
 
     @staticmethod
     def percentage_chance(chance: float, /) -> Function:
@@ -221,6 +231,8 @@ class Grid:
             tuple(Cell(x, y, self) for x in range(self.width)) for y in range(self.height)
         )
 
+        self._id = uuid4()
+
     def get(self, x: int, y: int, /) -> Cell | None:
         """Return the cell at the given coordinates. If the coordinates are out of bounds, return None."""
         if x < 0 or y < 0:
@@ -240,7 +252,7 @@ class Grid:
                     applicable_rules = [
                         rule
                         for rule in self.rules.get(cell.state, ())
-                        if rule.is_applicable(cell)
+                        if rule.is_applicable(cell)  # type: ignore[no-untyped-call]
                     ]
 
                     cell.previous_frame_state = cell.state
@@ -273,31 +285,39 @@ class Grid:
         """Return the string representation of the grid."""
         return "\n".join(" ".join(map(str, row)) for row in self.rows)
 
+    def __hash__(self) -> int:
+        """Return the hash of the grid."""
+        return hash(self._id)
+
+    def __eq__(self, other: Any) -> bool:
+        """Return whether the grid is equal to another grid."""
+        if not isinstance(other, Grid):
+            return False
+
+        return self._id == other._id
+
 
 def main() -> None:
     """Run the simulation."""
     raindrop_generator = Rule(
-        conditions=(
-            lambda c: c.is_top,
-            Condition.percentage_chance(0.01),
-        ),
+        condition=lambda c: c.is_top and Condition.percentage_chance(0.01)(c),
         assign=State.RAINDROP,
     )
 
     bottom_of_rain_down = Rule(
-        conditions=(lambda c: c.state_above is State.RAINDROP,),
+        condition=lambda c: c.state_above is State.RAINDROP,
         assign=State.RAINDROP,
     )
 
     splashdrop_down = Rule(
-        conditions=(lambda c: c.state_above is State.SPLASHDROP,),
+        condition=lambda c: c.state_above is State.SPLASHDROP,
         assign=State.SPLASHDROP,
     )
 
     top_of_raindrop_down = Rule(
-        conditions=(
-            lambda c: c.state_below in (State.RAINDROP, State.OFF_GRID),
-            lambda c: c.state_above in (State.NULL, State.OFF_GRID),
+        condition=(
+            lambda c: c.state_below in (State.RAINDROP, State.OFF_GRID)
+            and c.state_above in (State.NULL, State.OFF_GRID)
         ),
         assign=State.NULL,
     )
@@ -305,67 +325,59 @@ def main() -> None:
     nullify = Rule(assign=State.NULL)
 
     splash_left = Rule(
-        conditions=[
-            Condition(
-                lambda c: c.get_relative_cell(1, 1, no_exist_ok=False).has_state(
-                    State.RAINDROP
-                ),
-                default=False,
+        condition=lambda c: c.y == c.grid.height - 2
+        and Condition(
+            lambda c: c.get_relative_cell(1, 1, no_exist_ok=False).has_state(
+                State.RAINDROP
             ),
-            lambda c: c.y == c.grid.height - 2,
-        ],
+            default=False,
+        )(c),
         assign=State.SPLASH_LEFT,
     )
 
     splash_left_high = Rule(
-        conditions=[
-            lambda c: c.state_below is State.NULL,
-            Condition(
-                lambda c: c.get_relative_cell(1, 1, no_exist_ok=False).has_state(
-                    State.SPLASH_LEFT
-                ),
-                default=False,
+        condition=lambda c: Condition.cell_at_height(c, -3)
+        and c.state_below is State.NULL
+        and Condition(
+            lambda c: c.get_relative_cell(1, 1, no_exist_ok=False).has_state(
+                State.SPLASH_LEFT
             ),
-            Condition.at_height(-3),
-        ],
+            default=False,
+        )(c),
         assign=State.SPLASH_LEFT,
     )
 
     splash_right = Rule(
-        conditions=[
-            lambda c: c.state_below is State.NULL,
-            Condition(
-                lambda c: c.get_relative_cell(-1, 1, no_exist_ok=False).has_state(
-                    State.RAINDROP
-                ),
-                default=False,
+        condition=lambda c: Condition.cell_at_height(c, -2)
+        and c.state_below is State.NULL
+        and Condition(
+            lambda c: c.get_relative_cell(-1, 1, no_exist_ok=False).has_state(
+                State.RAINDROP
             ),
-            Condition.at_height(-2),
-        ],
+            default=False,
+        )(c),
         assign=State.SPLASH_RIGHT,
     )
 
     splash_right_high = Rule(
-        conditions=[
-            lambda c: c.state_below is State.NULL,
-            Condition(
-                lambda c: c.get_relative_cell(-1, 1, no_exist_ok=False).has_state(
-                    State.SPLASH_RIGHT
-                ),
-                default=False,
+        condition=lambda c: Condition.cell_at_height(c, -3)
+        and c.state_below is State.NULL
+        and Condition(
+            lambda c: c.get_relative_cell(-1, 1, no_exist_ok=False).has_state(
+                State.SPLASH_RIGHT
             ),
-            Condition.at_height(-3),
-        ],
+            default=False,
+        )(c),
         assign=State.SPLASH_RIGHT,
     )
 
     remove_splash_low = Rule(
-        conditions=(Condition.at_height(-2),),
+        condition=lambda c: Condition.cell_at_height(c, -2),
         assign=State.NULL,
     )
 
     remove_splash_high = Rule(
-        conditions=(Condition.at_height(-3),),
+        condition=lambda c: Condition.cell_at_height(c, -3),
         assign=State.SPLASHDROP,
     )
 
