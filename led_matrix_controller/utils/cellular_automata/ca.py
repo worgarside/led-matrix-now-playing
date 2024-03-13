@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import StrEnum
+from enum import Enum
 from functools import cached_property, lru_cache
 from random import random
 from time import sleep
@@ -11,17 +11,25 @@ from typing import Any, Callable, Collection, Generator, Literal, overload
 from uuid import uuid4
 
 
-class State(StrEnum):
+class State(Enum):
     """The state of a cell."""
 
-    NULL = "."
-    RAINDROP = "O"
-    SPLASHDROP = "o"
-    SPLASH_LEFT = "*"
-    SPLASH_RIGHT = "*"
+    OFF_GRID = -1, " ", 0, 0, 0
+    _UNSET = -2, "!", 0, 0, 0
+    NULL = 0, ".", 0, 0, 0
 
-    _UNSET = "!"
-    OFF_GRID = " "
+    RAINDROP = 1, "O", 13, 94, 255
+    SPLASHDROP = 2, "o", 107, 155, 250
+    SPLASH_LEFT = 3, "*", 170, 197, 250
+    SPLASH_RIGHT = 4, "*", 170, 197, 250
+
+    def __init__(self, value: int, str_repr: str, r: int, g: int, b: int):
+        self._value_ = value  # type: ignore[assignment]
+        self.str_repr = str_repr
+
+        self.r = r
+        self.g = g
+        self.b = b
 
 
 @dataclass
@@ -136,7 +144,7 @@ class Cell:
 
     def __str__(self) -> str:
         """Return the string representation of the cell."""
-        return self.state
+        return self.state.str_repr
 
     def __hash__(self) -> int:
         """Return the hash of the cell."""
@@ -177,6 +185,7 @@ class Rule:
 
 
 Rows = tuple[tuple[Cell, ...], ...]
+Frame = tuple[tuple[State, ...], ...]
 
 
 class Condition:
@@ -228,7 +237,7 @@ class Grid:
     width: int = -1
 
     frame_index: int = 0
-    runner_callback: Callable[[str], None] | None = None
+    runner_callback: Callable[[Frame], None] | None = None
 
     rules: dict[State, Collection[Rule]] = field(default_factory=dict)
 
@@ -253,7 +262,7 @@ class Grid:
         except IndexError:
             return None
 
-    def frames(self) -> Generator[str, None, None]:
+    def frames(self) -> Generator[Frame, None, None]:
         """Generate the frames of the grid."""
         while True:
             next_frame_number = self.frame_index + 1
@@ -286,9 +295,9 @@ class Grid:
             sleep(time_period)
 
     @property
-    def frame(self) -> str:
+    def frame(self) -> Frame:
         """Return the current frame of the grid."""
-        return str(self)
+        return tuple(tuple(c.state for c in row) for row in self.rows)
 
     def __str__(self) -> str:
         """Return the string representation of the grid."""
