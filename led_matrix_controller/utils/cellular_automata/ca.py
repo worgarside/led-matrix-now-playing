@@ -167,15 +167,11 @@ class Rule:
     def __init__(
         self,
         *,
-        condition: Condition | Condition.Function | None = None,
+        condition: Condition | Condition.Function = _true,
         assign: State = State._UNSET,
     ) -> None:
         self.assign = assign
-
-        if condition:
-            self.is_applicable: Condition.Function = lambda cell: condition(cell)
-        else:
-            self.is_applicable = _true
+        self.condition: Condition.Function = condition
 
     def __call__(self, cell: Cell) -> Any:
         """Apply the rule to the cell."""
@@ -277,7 +273,7 @@ class Grid:
 
                     try:
                         for rule in self.rules[cell.state]:
-                            if rule.is_applicable(cell):
+                            if rule.condition(cell):
                                 rule(cell)
                                 break
                     except KeyError:
