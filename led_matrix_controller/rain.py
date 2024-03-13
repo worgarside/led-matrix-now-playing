@@ -6,20 +6,20 @@ from time import time
 from typing import TYPE_CHECKING, Callable, ClassVar
 
 from models import RGBMatrix, RGBMatrixOptions
-from utils.cellular_automata.ca import Condition, Frame, Grid, Rule, State
+from utils.cellular_automata.ca import Condition, Grid, Rows, Rule, State
 
 if TYPE_CHECKING:
     from models.matrix import LedMatrixOptionsInfo
 
 
-def print_with_newlines(frame: Frame, /) -> None:
+def print_with_newlines(frame: Rows, /) -> None:
     """Print the string with newlines before and after."""
     print()
-    print("\n".join(" ".join(c.str_repr for c in row) for row in frame))
+    print("\n".join(" ".join(c.state.str_repr for c in row) for row in frame))
     print()
 
 
-def define_grid(*, height: int, runner_callback: Callable[[Frame], None] | None) -> Grid:
+def define_grid(*, height: int, runner_callback: Callable[[Rows], None] | None) -> Grid:
     """Define the grid and its rules."""
     raindrop_generator = Rule(
         condition=lambda c: c.is_top and Condition.percentage_chance(0.01)(c),
@@ -148,11 +148,12 @@ class Matrix:
         self.matrix = RGBMatrix(options=options)
         self.canvas = self.matrix.CreateFrameCanvas()
 
-    def render_frame(self, frame: Frame) -> None:
+    def render_frame(self, rows: Rows) -> None:
         """Render the frame to the LED matrix."""
-        for y, row in enumerate(frame):
-            for x, state in enumerate(row):
-                self.canvas.SetPixel(x, y, state.r, state.g, state.b)
+        for y, row in enumerate(rows):
+            for x, cell in enumerate(row):
+                if not cell.has_state(cell.previous_frame_state):
+                    self.canvas.SetPixel(x, y, cell.state.r, cell.state.g, cell.state.b)
 
         self.canvas = self.matrix.SwapOnVSync(self.canvas)
 
@@ -169,7 +170,8 @@ def main() -> None:
 
 def rough_benchmark() -> None:
     """Rough benchmark of the rain simulation."""
-    grid = define_grid(height=32, runner_callback=None)
+    matrix = Matrix()
+    grid = define_grid(height=32, runner_callback=matrix.render_frame)
 
     times = []
 

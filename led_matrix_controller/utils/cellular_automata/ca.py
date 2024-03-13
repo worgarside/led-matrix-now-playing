@@ -185,7 +185,6 @@ class Rule:
 
 
 Rows = tuple[tuple[Cell, ...], ...]
-Frame = tuple[tuple[State, ...], ...]
 
 
 class Condition:
@@ -237,7 +236,7 @@ class Grid:
     width: int = -1
 
     frame_index: int = 0
-    runner_callback: Callable[[Frame], None] | None = None
+    runner_callback: Callable[[Rows], None] | None = None
 
     rules: dict[State, Collection[Rule]] = field(default_factory=dict)
 
@@ -262,7 +261,7 @@ class Grid:
         except IndexError:
             return None
 
-    def frames(self) -> Generator[Frame, None, None]:
+    def frames(self) -> Generator[Rows, None, None]:
         """Generate the frames of the grid."""
         while True:
             next_frame_number = self.frame_index + 1
@@ -281,7 +280,7 @@ class Grid:
                     cell.frame_index = next_frame_number
 
             self.frame_index = next_frame_number
-            yield self.frame
+            yield self.rows
 
     def run(self, limit: int, time_period: float) -> None:
         """Run the simulation."""
@@ -293,11 +292,6 @@ class Grid:
                 break
 
             sleep(time_period)
-
-    @property
-    def frame(self) -> Frame:
-        """Return the current frame of the grid."""
-        return tuple(tuple(c.state for c in row) for row in self.rows)
 
     def __str__(self) -> str:
         """Return the string representation of the grid."""
