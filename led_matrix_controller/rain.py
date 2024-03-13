@@ -150,8 +150,8 @@ class Matrix:
 
     def render_frame(self, frame: Frame) -> None:
         """Render the frame to the LED matrix."""
-        for x, row in enumerate(frame):
-            for y, state in enumerate(row):
+        for y, row in enumerate(frame):
+            for x, state in enumerate(row):
                 self.canvas.SetPixel(x, y, state.r, state.g, state.b)
 
         self.canvas = self.matrix.SwapOnVSync(self.canvas)
@@ -162,7 +162,7 @@ def main() -> None:
 
     matrix = Matrix()
 
-    grid = define_grid(height=32, runner_callback=matrix.render_frame)
+    grid = define_grid(height=64, runner_callback=matrix.render_frame)
 
     grid.run(limit=1000, time_period=0.04)
 
