@@ -289,6 +289,9 @@ class Grid:
 
     def run(self, callback: Callable[[Rows], None], limit: int | None = None) -> None:
         """Run the simulation."""
+        if limit:
+            limit += self.frame_index
+
         with suppress(self.Break):
             for frame in self.frames():
                 callback(frame)
