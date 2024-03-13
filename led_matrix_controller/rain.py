@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from time import time
-from typing import TYPE_CHECKING, Callable, ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from models import RGBMatrix, RGBMatrixOptions
 from utils.cellular_automata.ca import Condition, Grid, Rows, Rule, State
@@ -19,10 +19,10 @@ def print_with_newlines(frame: Rows, /) -> None:
     print()
 
 
-def define_grid(*, height: int, runner_callback: Callable[[Rows], None] | None) -> Grid:
+def define_grid(*, height: int) -> Grid:
     """Define the grid and its rules."""
     raindrop_generator = Rule(
-        condition=lambda c: c.is_top and Condition.percentage_chance(0.01)(c),
+        condition=lambda c: c.is_top and Condition.percentage_chance(0.025)(c),
         assign=State.RAINDROP,
     )
 
@@ -120,7 +120,6 @@ def define_grid(*, height: int, runner_callback: Callable[[Rows], None] | None) 
             State.SPLASH_LEFT: [remove_splash_low, remove_splash_high],
             State.SPLASH_RIGHT: [remove_splash_low, remove_splash_high],
         },
-        runner_callback=runner_callback,
     )
 
 
@@ -155,7 +154,7 @@ class Matrix:
                 if not cell.has_state(cell.previous_frame_state):
                     self.canvas.SetPixel(x, y, cell.state.r, cell.state.g, cell.state.b)
 
-        self.canvas = self.matrix.SwapOnVSync(self.canvas)
+        self.matrix.SwapOnVSync(self.canvas)
 
 
 def main() -> None:
@@ -163,21 +162,21 @@ def main() -> None:
 
     matrix = Matrix()
 
-    grid = define_grid(height=64, runner_callback=matrix.render_frame)
+    grid = define_grid(height=64)
 
-    grid.run(limit=1000, time_period=0.04)
+    grid.run(matrix.render_frame)
 
 
 def rough_benchmark() -> None:
     """Rough benchmark of the rain simulation."""
     matrix = Matrix()
-    grid = define_grid(height=32, runner_callback=matrix.render_frame)
+    grid = define_grid(height=32)
 
     times = []
 
     for _ in range(10):
         start = time()
-        grid.run(limit=1000, time_period=0)
+        grid.run(matrix.render_frame, limit=1000)
         times.append(time() - start)
 
         print(f"Rough benchmark: {times[-1]:.2f} seconds")

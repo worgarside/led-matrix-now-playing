@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import cached_property, lru_cache
 from random import random
-from time import sleep
-from typing import Any, Callable, Collection, Generator, Literal, overload
+from typing import Any, Callable, Collection, Generator, Literal, TypeVar, overload
 from uuid import uuid4
 
 
@@ -228,6 +228,9 @@ class Condition:
         return lambda _: random() < chance  # noqa: S311
 
 
+T = TypeVar("T")
+
+
 @dataclass
 class Grid:
     """A grid of cells."""
@@ -236,9 +239,11 @@ class Grid:
     width: int = -1
 
     frame_index: int = 0
-    runner_callback: Callable[[Rows], None] | None = None
 
     rules: dict[State, Collection[Rule]] = field(default_factory=dict)
+
+    class Break(Exception):  # noqa: N818
+        """Escape hatch to allow breaking out of the render loop from within a callback."""
 
     def __post_init__(self) -> None:
         """Create the rows of cells."""
@@ -282,16 +287,16 @@ class Grid:
             self.frame_index = next_frame_number
             yield self.rows
 
-    def run(self, limit: int, time_period: float) -> None:
+    def run(
+        self, callback: Callable[[Rows], T], limit: int | None = None
+    ) -> Generator[T, None, None]:
         """Run the simulation."""
-        for i, fr in enumerate(self.frames()):
-            if self.runner_callback:
-                self.runner_callback(fr)
+        with suppress(self.Break):
+            for frame in self.frames():
+                yield callback(frame)
 
-            if i > limit:
-                break
-
-            sleep(time_period)
+                if limit and self.frame_index >= limit:
+                    break
 
     def __str__(self) -> str:
         """Return the string representation of the grid."""
