@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 import pytest
 from rain import define_grid
-from utils.cellular_automata.ca import Grid, Rows
 
 if TYPE_CHECKING:
     from pytest_codspeed.plugin import BenchmarkFixture  # type: ignore[import-untyped]
@@ -31,8 +30,4 @@ def test_ca(benchmark: BenchmarkFixture, height: int, limit: int) -> None:
     """Benchmark the CA."""
     grid = define_grid(height=height)
 
-    def _cb(_: Rows) -> None:
-        if grid.frame_index >= limit:
-            raise Grid.Break
-
-    benchmark(lambda: grid.run(_cb))
+    benchmark(lambda: grid.run(limit=limit))

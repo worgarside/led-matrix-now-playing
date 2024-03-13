@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from time import time
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from models import RGBMatrix, RGBMatrixOptions
-from utils.cellular_automata.ca import Condition, Grid, Rows, Rule, State
+from utils.cellular_automata.ca import Cell, Condition, Grid, Rows, Rule, State
 
 if TYPE_CHECKING:
     from models.matrix import LedMatrixOptionsInfo
@@ -147,13 +147,21 @@ class Matrix:
         self.matrix = RGBMatrix(options=options)
         self.canvas = self.matrix.CreateFrameCanvas()
 
+    def update_cell(self, cell: Cell, /) -> None:
+        """Update the cell on the LED matrix."""
+        if not cell.has_state(cell.previous_frame_state):
+            self.canvas.SetPixel(cell.x, cell.y, cell.state.r, cell.state.g, cell.state.b)
+
     def render_frame(self, rows: Rows) -> None:
         """Render the frame to the LED matrix."""
-        for y, row in enumerate(rows):
-            for x, cell in enumerate(row):
-                if not cell.has_state(cell.previous_frame_state):
-                    self.canvas.SetPixel(x, y, cell.state.r, cell.state.g, cell.state.b)
+        for row in rows:
+            for cell in row:
+                self.update_cell(cell)
 
+        self.swap_on_vsync(None)
+
+    def swap_on_vsync(self, _: Any) -> None:
+        """Swap the canvas on the vertical sync."""
         self.matrix.SwapOnVSync(self.canvas)
 
 
@@ -164,7 +172,7 @@ def main() -> None:
 
     grid = define_grid(height=64)
 
-    grid.run(matrix.render_frame)
+    grid.run(cell_callback=matrix.update_cell, frame_callback=matrix.swap_on_vsync)
 
 
 def rough_benchmark() -> None:
@@ -176,7 +184,11 @@ def rough_benchmark() -> None:
 
     for _ in range(10):
         start = time()
-        grid.run(matrix.render_frame, limit=1000)
+        grid.run(
+            cell_callback=matrix.update_cell,
+            frame_callback=matrix.swap_on_vsync,
+            limit=1000,
+        )
         times.append(time() - start)
 
         print(f"Rough benchmark: {times[-1]:.2f} seconds")

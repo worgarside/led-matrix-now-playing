@@ -139,7 +139,6 @@ class Cell:
 
     def has_state(self, state: State) -> bool:
         """Return whether the cell has the given state."""
-        # TODO this dpesn't work properly (set SPLASH_LEFT/RIGHT to L and R)
         return self.state is state
 
     def __str__(self) -> str:
@@ -266,7 +265,9 @@ class Grid:
         except IndexError:
             return None
 
-    def frames(self) -> Generator[Rows, None, None]:
+    def frames(
+        self, cell_callback: Callable[[Cell], None] | None = None
+    ) -> Generator[Rows, None, None]:
         """Generate the frames of the grid."""
         while True:
             next_frame_number = self.frame_index + 1
@@ -284,17 +285,27 @@ class Grid:
 
                     cell.frame_index = next_frame_number
 
+                    if cell_callback:
+                        cell_callback(cell)
+
             self.frame_index = next_frame_number
             yield self.rows
 
-    def run(self, callback: Callable[[Rows], None], limit: int | None = None) -> None:
+    def run(
+        self,
+        *,
+        cell_callback: Callable[[Cell], None] | None = None,
+        frame_callback: Callable[[Rows], None] | None = None,
+        limit: int | None = None,
+    ) -> None:
         """Run the simulation."""
         if limit:
             limit += self.frame_index
 
         with suppress(self.Break):
-            for frame in self.frames():
-                callback(frame)
+            for frame in self.frames(cell_callback=cell_callback):
+                if frame_callback:
+                    frame_callback(frame)
 
                 if limit and self.frame_index >= limit:
                     break
