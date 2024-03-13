@@ -28,6 +28,7 @@ log_cli_level = "warning"
 pythonpath = ["led_matrix_controller"]
 testpaths = ["tests"]
 env = [
+  "ARTWORK_DIR=./artwork",
   "MQTT_USERNAME=test",
   "MQTT_PASSWORD=test",
 ]
