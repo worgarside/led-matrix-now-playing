@@ -287,13 +287,11 @@ class Grid:
             self.frame_index = next_frame_number
             yield self.rows
 
-    def run(
-        self, callback: Callable[[Rows], T], limit: int | None = None
-    ) -> Generator[T, None, None]:
+    def run(self, callback: Callable[[Rows], None], limit: int | None = None) -> None:
         """Run the simulation."""
         with suppress(self.Break):
             for frame in self.frames():
-                yield callback(frame)
+                callback(frame)
 
                 if limit and self.frame_index >= limit:
                     break
