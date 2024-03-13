@@ -259,6 +259,8 @@ class Grid:
             next_frame_number = self.frame_index + 1
             for row in self.rows:
                 for cell in row:
+                    cell.previous_frame_state = cell.state
+
                     try:
                         for rule in self.rules[cell.state]:
                             if rule.is_applicable(cell):
@@ -266,8 +268,6 @@ class Grid:
                                 break
                     except KeyError:
                         pass
-
-                    cell.previous_frame_state = cell.state
 
                     cell.frame_index = next_frame_number
 
