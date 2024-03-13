@@ -96,6 +96,8 @@ repos:
       - id: codespell
         additional_dependencies:
           - tomli==2.0.1
-        args:
-          - --skip
-          - '*.svg,*.json'
+
+  - repo: https://github.com/jendrikseipp/vulture
+    rev: v2.10
+    hooks:
+      - id: vulture

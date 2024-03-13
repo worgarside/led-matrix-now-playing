@@ -137,5 +137,5 @@ docstring-code-line-length = "dynamic"
 
 [tool.vulture]
 min_confidence = 70
-paths = ["tests", "wg_utilities"]
+paths = ["tests", "led_matrix_controller"]
 sort_by_size = true
