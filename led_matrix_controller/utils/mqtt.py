@@ -67,4 +67,6 @@ def on_disconnect(client: Client, userdata: dict[str, object], rc: int) -> None:
 
 MQTT_CLIENT.on_connect = on_connect  # type: ignore[assignment]
 MQTT_CLIENT.on_disconnect = on_disconnect
-MQTT_CLIENT.connect(MQTT_HOST)
+
+if MQTT_USERNAME != "test":
+    MQTT_CLIENT.connect(MQTT_HOST)
