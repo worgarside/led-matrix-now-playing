@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from time import time
 from typing import TYPE_CHECKING, Any, ClassVar
-
+import numpy as np
+from numpy.typing import NDArray
 from models import RGBMatrix, RGBMatrixOptions
-from utils.cellular_automata.ca import Cell, Condition, Grid, Rows, Rule, State
+from utils.cellular_automata.ca import Cell, Condition, Grid, Rows, Rule
+from utils.cellular_automata.ca2 import RainingGrid, State
 
 if TYPE_CHECKING:
     from models.matrix import LedMatrixOptionsInfo
@@ -160,6 +162,20 @@ class Matrix:
 
         self.swap_on_vsync(None)
 
+    def render_array(self, array: NDArray):
+        colors = {
+                1:(13, 94, 255),
+                2:(107, 155, 250),
+                3:(170, 197, 250),
+                4:(170, 197, 250),
+        }
+
+
+        for (y, x), state in np.ndenumerate(array):
+            self.canvas.SetPixel(x, y, *colors.get(state, (0, 0, 0)))
+
+        self.swap_on_vsync(None)
+
     def swap_on_vsync(self, _: Any) -> None:
         """Swap the canvas on the vertical sync."""
         self.matrix.SwapOnVSync(self.canvas)
@@ -170,10 +186,29 @@ def main() -> None:
 
     matrix = Matrix()
 
-    grid = define_grid(height=64)
+    size = 64
 
-    grid.run(cell_callback=matrix.update_cell, frame_callback=matrix.swap_on_vsync)
+    grid = RainingGrid(size)
 
+    for _ in range(1000):
+        masks = [
+            (grid.generate_raindrops(), State.RAINDROP),
+            (grid.move_rain_down(), State.RAINDROP),
+            (grid.top_of_rain_down(), State.NULL),
+            (grid.splash_left(), State.SPLASH_LEFT),
+            (grid.splash_left_high(), State.SPLASH_LEFT),
+            (grid.remove_splash_left_lower(), State.NULL),
+            (grid.remove_splash_left_higher(), State.SPLASHDROP),
+            (grid.move_splashdrop_down(), State.SPLASHDROP),
+            (grid.splash_right(), State.SPLASH_RIGHT),
+            (grid.splash_right_high(), State.SPLASH_RIGHT),
+        ]
+
+        for mask, state in masks:
+            grid._grid[mask] = state
+
+        matrix.render_array(grid._grid)
+        
 
 def rough_benchmark() -> None:
     """Rough benchmark of the rain simulation."""

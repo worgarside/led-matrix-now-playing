@@ -12,6 +12,7 @@ pillow = "^10.2.0"
 requests = "^2.31.0"
 wg-utilities = {extras = ["exceptions"], version = "^5.14.1"}
 paho-mqtt = "^1.6.1"
+numpy = "^1.26.4"
 
 [tool.poetry.group.dev.dependencies]
 rgbmatrixemulator = "^0.11.3"
@@ -34,6 +35,7 @@ env = [
 ]
 
 [tool.mypy]
+plugins = "numpy.typing.mypy_plugin"
 exclude = ["_local_sandbox"]
 mypy_path = "led_matrix_controller"
 follow_imports = "normal"
