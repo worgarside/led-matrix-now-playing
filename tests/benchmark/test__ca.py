@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from itertools import product
 from typing import TYPE_CHECKING
 
 import pytest
@@ -16,15 +17,7 @@ if TYPE_CHECKING:
         "height",
         "limit",
     ),
-    [
-        (8, 100),
-        (16, 100),
-        (32, 100),
-        (8, 1000),
-        (16, 1000),
-        (32, 1000),
-        (8, 10000),
-    ],
+    list(product([8, 16, 32, 64], [1, 10, 100, 1000, 10000, 100000, 1000000])),
 )
 def test_ca(benchmark: BenchmarkFixture, height: int, limit: int) -> None:
     """Benchmark the CA."""
