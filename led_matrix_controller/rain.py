@@ -31,7 +31,7 @@ class RainingGrid(Grid):
     @Grid.rule(State.RAINDROP, target_slice=0)
     def generate_raindrops(self) -> Mask:
         """Generate raindrops at the top of the grid."""
-        return np.random.rand(self.width) < 0.025  # noqa: PLR2004
+        return np.random.random(self.width) < 0.025  # noqa: PLR2004
 
     @Grid.rule(State.RAINDROP, target_slice=(slice(1, None), slice(None)))
     def move_rain_down(self, target_slice: TargetSlice) -> Mask:
