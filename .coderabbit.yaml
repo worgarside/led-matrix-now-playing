@@ -15,7 +15,7 @@ reviews:
   collapse_walkthrough: true
 
   path_filters:
-    - src/**/*.py
+    - led_matrix_controller/**/*.py
 
   path_instructions:
     - path: '**/*.py'
