@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from rain import define_grid
+from rain import RainingGrid
 
 if TYPE_CHECKING:
     from pytest_codspeed.plugin import BenchmarkFixture  # type: ignore[import-untyped]
@@ -28,6 +28,6 @@ if TYPE_CHECKING:
 )
 def test_ca(benchmark: BenchmarkFixture, height: int, limit: int) -> None:
     """Benchmark the CA."""
-    grid = define_grid(height=height)
+    grid = RainingGrid(height)
 
     benchmark(lambda: grid.run(limit=limit))
