@@ -2,11 +2,15 @@
 name: CodSpeed Benchmarks
 
 on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - ready_for_review
+      - synchronize
   push:
     branches:
       - main
-
-  pull_request:
   workflow_dispatch:
 
 env:
@@ -16,6 +20,7 @@ jobs:
   benchmarks:
     name: Run Benchmarks
     runs-on: ubuntu-latest
+    if: '${{ !github.event.pull_request.draft }}'
     steps:
       - name: Clone Repo
         uses: actions/checkout@v4
@@ -42,7 +47,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .venv
-          key: venv-${{ hashFiles(env.CACHE_FILE) }}
+          key: 'venv-${{ hashFiles(env.CACHE_FILE) }}'
 
       - name: Install Dependencies
         run: poetry install --sync
@@ -50,5 +55,5 @@ jobs:
       - name: Run Benchmarks
         uses: CodSpeedHQ/action@v2
         with:
-          token: ${{ secrets.CODSPEED_TOKEN }}
-          run: poetry run pytest tests/ --codspeed
+          token: '${{ secrets.CODSPEED_TOKEN }}'
+          run: poetry run pytest --codspeed
