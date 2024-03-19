@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from itertools import product
 from typing import TYPE_CHECKING
 
 import pytest
@@ -17,13 +18,13 @@ if TYPE_CHECKING:
         "limit",
     ),
     [
-        (8, 100),
-        (16, 100),
-        (32, 100),
-        (8, 1000),
-        (16, 1000),
-        (32, 1000),
-        (8, 10000),
+        pytest.param(
+            height,
+            limit,
+            id=f"{limit} frame{'s' if limit > 1 else ''} @ {height}x{height}",
+            marks=pytest.mark.xdist_group(f"{height}-{limit}"),
+        )
+        for height, limit in product([8, 16, 32, 64], [1, 10, 100, 1000, 10000])
     ],
 )
 def test_ca(benchmark: BenchmarkFixture, height: int, limit: int) -> None:
