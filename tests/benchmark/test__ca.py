@@ -24,10 +24,10 @@ if TYPE_CHECKING:
             id=f"{limit} frame{'s' if limit > 1 else ''} @ {height}x{height}",
             marks=pytest.mark.xdist_group(f"{height}-{limit}"),
         )
-        for height, limit in product([8, 16, 32, 64], [1, 10, 100, 1000, 10000])
+        for height, limit in product([8, 16, 32, 64], [10**i for i in range(6)])
     ],
 )
-def test_ca(benchmark: BenchmarkFixture, height: int, limit: int) -> None:
+def test_raining_grid(benchmark: BenchmarkFixture, height: int, limit: int) -> None:
     """Benchmark the CA."""
     grid = RainingGrid(height)
 
