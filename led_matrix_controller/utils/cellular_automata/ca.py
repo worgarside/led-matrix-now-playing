@@ -1,322 +1,137 @@
-"""Simple implementation of a 2D cellular automaton."""
+"""Cellular Automata module."""
 
 from __future__ import annotations
 
-from contextlib import suppress
-from dataclasses import dataclass, field
+import inspect
+from dataclasses import dataclass
 from enum import Enum
-from functools import cached_property, lru_cache
-from random import random
-from typing import Any, Callable, Collection, Generator, Literal, TypeVar, overload
-from uuid import uuid4
+from functools import wraps
+from itertools import islice
+from typing import Any, Callable, ClassVar, Generator, Self
+
+import numpy as np
+from numpy.typing import DTypeLike, NDArray
+
+_BY_VALUE: dict[int, StateBase] = {}
 
 
-class State(Enum):
-    """The state of a cell."""
-
-    OFF_GRID = -1, " ", 0, 0, 0
-    _UNSET = -2, "!", 0, 0, 0
-    NULL = 0, ".", 0, 0, 0
-
-    RAINDROP = 1, "O", 13, 94, 255
-    SPLASHDROP = 2, "o", 107, 155, 250
-    SPLASH_LEFT = 3, "*", 170, 197, 250
-    SPLASH_RIGHT = 4, "*", 170, 197, 250
-
-    def __init__(self, value: int, str_repr: str, r: int, g: int, b: int):
-        self._value_ = value  # type: ignore[assignment]
-        self.str_repr = str_repr
-
-        self.r = r
-        self.g = g
-        self.b = b
-
-
-@dataclass
-class Cell:
-    """A cell in a grid."""
-
-    x: int
-    y: int
-    grid: Grid
-
-    def __post_init__(self) -> None:
-        """Set the calculated attributes of the Cell."""
-        self.frame_index = self.grid.frame_index
-
-        self.is_top = self.y == 0
-        self.is_bottom = self.y == self.grid.height - 1
-        self.is_left = self.x == 0
-        self.is_right = self.x == self.grid.width - 1
-
-    _state: State = State.NULL
-    last_state_change: State = State._UNSET
-    previous_frame_state: State = State._UNSET
-
-    @overload
-    def get_relative_cell(self, x: int, y: int) -> Cell | None: ...
-
-    @overload
-    def get_relative_cell(
-        self, x: int, y: int, *, no_exist_ok: Literal[True]
-    ) -> Cell | None: ...
-
-    @overload
-    def get_relative_cell(
-        self, x: int, y: int, *, no_exist_ok: Literal[False]
-    ) -> Cell: ...
-
-    def get_relative_cell(
-        self, x: int, y: int, *, no_exist_ok: bool = True
-    ) -> Cell | None:
-        """Return the cell at the given relative coordinates. If the cell does not exist, return None."""
-        if (cell := self.grid.get(self.x + x, self.y + y)) or no_exist_ok:
-            return cell
-
-        raise ValueError(f"Cell at {self.x + x}, {self.y + y} does not exist")
-
-    @cached_property
-    def cell_above(self) -> Cell | None:
-        """Return the cell above this one. If this is the top cell, return None."""
-        return self.get_relative_cell(0, -1)
-
-    @cached_property
-    def cell_below(self) -> Cell | None:
-        """Return the cell below this one. If this is the bottom cell, return None."""
-        return self.get_relative_cell(0, 1)
-
-    @cached_property
-    def cell_left(self) -> Cell | None:
-        """Return the cell to the left of this one. If this is the leftmost cell, return None."""
-        return self.get_relative_cell(-1, 0)
-
-    @cached_property
-    def cell_right(self) -> Cell | None:
-        """Return the cell to the right of this one. If this is the rightmost cell, return None."""
-        return self.get_relative_cell(1, 0)
-
-    def _get_state(self, other: Cell | None) -> State:
-        if other is None:
-            return State.OFF_GRID
-
-        if other.frame_index == self.frame_index + 1:
-            return other.previous_frame_state
-
-        if other.frame_index == self.frame_index:
-            return other.state
-
-        raise ValueError(f"Other: {other.frame_index}; This: {self.frame_index}")
-
-    @property
-    def state_above(self) -> State:
-        """Return the state of the cell above of this one. If there is no cell above, return OFF_GRID."""
-        return self._get_state(self.cell_above)
-
-    @property
-    def state_below(self) -> State:
-        """Return the state of the below this one. If there is no below, return OFF_GRID."""
-        return self._get_state(self.cell_below)
-
-    @property
-    def state_left(self) -> State:
-        """Return the state of the cell to the left of this one. If there is no cell, return OFF_GRID."""
-        return self._get_state(self.cell_left)
-
-    @property
-    def state_right(self) -> State:
-        """Return the state of the cell to the right of this one. If there is no cell, return OFF_GRID."""
-        return self._get_state(self.cell_right)
-
-    @property
-    def state(self) -> State:
-        """Return the state of the cell."""
-        return self._state
-
-    @state.setter
-    def state(self, value: State) -> None:
-        self.last_state_change = self._state
-        self._state = value
-
-    def has_state(self, state: State) -> bool:
-        """Return whether the cell has the given state."""
-        return self.state is state
-
-    def __str__(self) -> str:
-        """Return the string representation of the cell."""
-        return self.state.str_repr
-
-    def __hash__(self) -> int:
-        """Return the hash of the cell."""
-        return hash((self.x, self.y, self.grid))
-
-    def __eq__(self, other: Any) -> bool:
-        """Return whether the cell is equal to another cell."""
-        if not isinstance(other, Cell):
-            return False
-
-        return self.x == other.x and self.y == other.y and self.grid == other.grid
-
-
-def _true(_: Cell) -> Literal[True]:
-    return True
-
-
-class Rule:
-    """A rule that can be applied to a cell."""
+# TODO can this be an ABC?
+class StateBase(Enum):
+    """Base class for the states of a cell."""
 
     def __init__(
-        self,
-        *,
-        condition: Condition | Condition.Function = _true,
-        assign: State = State._UNSET,
+        self, value: int, char: str, color: tuple[int, int, int] = (0, 0, 0)
     ) -> None:
-        self.assign = assign
-        self.condition: Condition.Function = condition
+        self._value_ = value
+        self.char = char
+        self.color = color
 
-    def __call__(self, cell: Cell) -> Any:
-        """Apply the rule to the cell."""
-        if self.assign is not State._UNSET:
-            cell.state = self.assign
+        _BY_VALUE[value] = self
 
+    @classmethod
+    def by_value(cls, value: int | np.int_) -> StateBase:
+        """Return the state by its value."""
+        return _BY_VALUE[int(value)]
 
-Rows = tuple[tuple[Cell, ...], ...]
+    def __eq__(self, __value: object) -> bool:
+        """Check if a value (either another State or an int) is equal to this State."""
+        if isinstance(__value, int):
+            return bool(self.value == __value)
 
+        if not isinstance(__value, StateBase):
+            return False
 
-class Condition:
-    """A condition that can be used to determine if a rule is applicable."""
+        return bool(self.value == __value.value)
 
-    Function = Callable[[Cell], bool]
-
-    def __init__(self, cond: Function, /, *, default: bool) -> None:
-        self.cond = cond
-        self.default = default
-
-    def __call__(self, cell: Cell, /) -> bool:
-        """Return the result of the condition. If the condition raises an exception, return the default value."""
-        try:
-            return self.cond(cell)
-        except Exception:
-            return self.default
-
-    @lru_cache(maxsize=None)
-    @staticmethod
-    def check_height(height: int, /) -> Function:
-        """Return a condition that checks if the cell is at the given height."""
-
-        def _check(cell: Cell) -> bool:
-            if height < 0:
-                return cell.y == cell.grid.height + height
-
-            return cell.y == height
-
-        return _check
-
-    @staticmethod
-    def cell_at_height(cell: Cell, height: int, /) -> bool:
-        """Return a condition that checks if the cell is at the given height."""
-
-        return Condition.check_height(height)(cell)
-
-    @staticmethod
-    def percentage_chance(chance: float, /) -> Function:
-        """Return a condition that has a `chance` percentage of being True."""
-        return lambda _: random() < chance  # noqa: S311
+    def __hash__(self) -> int:
+        """Return the hash of the value of the state."""
+        return hash(self.value)
 
 
-T = TypeVar("T")
+TargetSliceDecVal = slice | int | tuple[int | slice, int | slice]
+TargetSlice = tuple[slice, slice]
+Mask = NDArray[np.bool_]
 
 
 @dataclass
 class Grid:
-    """A grid of cells."""
+    """Base class for a grid of cells."""
 
     height: int
     width: int = -1
 
     frame_index: int = 0
 
-    rules: dict[State, Collection[Rule]] = field(default_factory=dict)
+    _RULES: ClassVar = []
 
-    class Break(Exception):  # noqa: N818
-        """Escape hatch to allow breaking out of the render loop from within a callback."""
+    Rule: ClassVar = Callable[[Self], Mask]
 
     def __post_init__(self) -> None:
-        """Create the rows of cells."""
+        """Set the calculated attributes of the Grid."""
         if self.width == -1:
             self.width = self.height
 
-        self.rows: Rows = tuple(
-            tuple(Cell(x, y, self) for x in range(self.width)) for y in range(self.height)
-        )
+        self._grid: NDArray[np.int_] = self.zeros()
 
-        self._id = uuid4()
+    @classmethod
+    def rule(
+        cls,
+        to_state: StateBase,
+        *,
+        target_slice: TargetSliceDecVal | None = None,
+    ) -> Callable[[Callable[..., Mask]], Callable[..., Mask]]:
+        """Decorator to add a rule to the grid.
 
-    def get(self, x: int, y: int, /) -> Cell | None:
-        """Return the cell at the given coordinates. If the coordinates are out of bounds, return None."""
-        if x < 0 or y < 0:
-            return None
+        Args:
+            to_state (StateBase): The state to change to.
+            target_slice (TargetSliceDecVal | None, optional): The slice to target. Defaults to entire grid.
+        """
+        if target_slice is None:
+            target_slice = (slice(None), slice(None))
 
-        try:
-            return self.rows[y][x]
-        except IndexError:
-            return None
+        def decorator(func: Callable[..., Mask]) -> Grid.Rule:
+            if "target_slice" in inspect.signature(func).parameters:
 
-    def frames(
-        self, cell_callback: Callable[[Cell], None] | None = None
-    ) -> Generator[Rows, None, None]:
+                @wraps(func)
+                def wrapper(self: Grid) -> Mask:
+                    return func(self, target_slice)
+            else:
+
+                @wraps(func)
+                def wrapper(self: Grid) -> Mask:
+                    return func(self)
+
+            cls._RULES.append((target_slice, wrapper, to_state))
+            return wrapper
+
+        return decorator
+
+    def run(self, limit: int) -> Generator[NDArray[np.int_], None, None]:
+        """Run the simulation for a given number of frames."""
+        yield from islice(self.frames, limit)
+
+    def fresh_mask(self) -> Mask:
+        """Return a fresh mask."""
+        return self.zeros(dtype=np.bool_)
+
+    def zeros(self, *, dtype: DTypeLike = np.int_) -> NDArray[Any]:
+        """Return a grid of zeros."""
+        return np.zeros((self.height, self.width), dtype=dtype)
+
+    @property
+    def frames(self) -> Generator[NDArray[np.int_], None, None]:
         """Generate the frames of the grid."""
         while True:
-            next_frame_number = self.frame_index + 1
-            for row in self.rows:
-                for cell in row:
-                    cell.previous_frame_state = cell.state
+            updates = []
+            for target_slice, rule, to_state in self._RULES:
+                updates.append((target_slice, rule(self), to_state))
 
-                    try:
-                        for rule in self.rules[cell.state]:
-                            if rule.condition(cell):
-                                rule(cell)
-                                break
-                    except KeyError:
-                        pass
+            for target_slice, mask, state in updates:
+                self._grid[target_slice][mask] = state.value
 
-                    cell.frame_index = next_frame_number
+            yield self._grid
 
-                    if cell_callback:
-                        cell_callback(cell)
-
-            self.frame_index = next_frame_number
-            yield self.rows
-
-    def run(
-        self,
-        *,
-        cell_callback: Callable[[Cell], None] | None = None,
-        frame_callback: Callable[[Rows], None] | None = None,
-        limit: int | None = None,
-    ) -> None:
-        """Run the simulation."""
-        if limit:
-            limit += self.frame_index
-
-        with suppress(self.Break):
-            for frame in self.frames(cell_callback=cell_callback):
-                if frame_callback:
-                    frame_callback(frame)
-
-                if limit and self.frame_index >= limit:
-                    break
-
-    def __str__(self) -> str:
-        """Return the string representation of the grid."""
-        return "\n".join(" ".join(map(str, row)) for row in self.rows)
-
-    def __hash__(self) -> int:
-        """Return the hash of the grid."""
-        return hash(self._id)
-
-    def __eq__(self, other: Any) -> bool:
-        """Return whether the grid is equal to another grid."""
-        if not isinstance(other, Grid):
-            return False
-
-        return self._id == other._id
+    @property
+    def str_repr(self) -> str:
+        """Return a string representation of the grid."""
+        return "\n".join(" ".join(state.char for state in row) for row in self._grid)

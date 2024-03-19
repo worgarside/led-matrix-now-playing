@@ -2,125 +2,135 @@
 
 from __future__ import annotations
 
-from time import time
-from typing import TYPE_CHECKING, Any, ClassVar
+from enum import unique
+from typing import TYPE_CHECKING, ClassVar
 
+import numpy as np
 from models import RGBMatrix, RGBMatrixOptions
-from utils.cellular_automata.ca import Cell, Condition, Grid, Rows, Rule, State
+from utils.cellular_automata.ca import Grid, Mask, StateBase, TargetSlice
 
 if TYPE_CHECKING:
     from models.matrix import LedMatrixOptionsInfo
+    from numpy.typing import NDArray
 
 
-def print_with_newlines(frame: Rows, /) -> None:
-    """Print the string with newlines before and after."""
-    print()
-    print("\n".join(" ".join(c.state.str_repr for c in row) for row in frame))
-    print()
+@unique
+class State(StateBase):
+    """Enum representing the state of a cell."""
+
+    NULL = 0, " "
+    RAINDROP = 1, "O", (13, 94, 255)
+    SPLASHDROP = 2, "o", (107, 155, 250)
+    SPLASH_LEFT = 3, "*", (170, 197, 250)
+    SPLASH_RIGHT = 4, "*", (170, 197, 250)
 
 
-def define_grid(*, height: int) -> Grid:
-    """Define the grid and its rules."""
-    raindrop_generator = Rule(
-        condition=lambda c: c.is_top and Condition.percentage_chance(0.025)(c),
-        assign=State.RAINDROP,
-    )
+class RainingGrid(Grid):
+    """Basic rain simulation."""
 
-    bottom_of_rain_down = Rule(
-        condition=lambda c: c.state_above is State.RAINDROP,
-        assign=State.RAINDROP,
-    )
+    @Grid.rule(State.RAINDROP, target_slice=0)
+    def generate_raindrops(self) -> Mask:
+        """Generate raindrops at the top of the grid."""
+        return np.random.random(self.width) < 0.025  # noqa: PLR2004
 
-    splashdrop_down = Rule(
-        condition=lambda c: c.state_above is State.SPLASHDROP,
-        assign=State.SPLASHDROP,
-    )
+    @Grid.rule(State.RAINDROP, target_slice=(slice(1, None), slice(None)))
+    def move_rain_down(self, target_slice: TargetSlice) -> Mask:
+        """Move raindrops down one cell."""
+        lower_slice = self._grid[*target_slice]
+        upper_slice = self._grid[:-1, :]
 
-    top_of_raindrop_down = Rule(
-        condition=(
-            lambda c: c.state_below in (State.RAINDROP, State.OFF_GRID)
-            and c.state_above in (State.NULL, State.OFF_GRID)
-        ),
-        assign=State.NULL,
-    )
+        mask: Mask = (upper_slice == State.RAINDROP) & (lower_slice == State.NULL)
 
-    nullify = Rule(assign=State.NULL)
+        return mask
 
-    splash_left = Rule(
-        condition=lambda c: Condition.cell_at_height(c, -2)
-        and Condition(
-            lambda c: c.get_relative_cell(1, 1, no_exist_ok=False).has_state(
-                State.RAINDROP
-            ),
-            default=False,
-        )(c),
-        assign=State.SPLASH_LEFT,
-    )
+    @Grid.rule(State.NULL)
+    def top_of_rain_down(self) -> Mask:
+        """Move the top of a raindrop down."""
+        middle_slice = self._grid[slice(1, -1), slice(None)]
+        above_slice = self._grid[slice(None, -2), slice(None)]
+        below_slice = self._grid[slice(2, None), slice(None)]
 
-    splash_left_high = Rule(
-        condition=lambda c: Condition.cell_at_height(c, -3)
-        and c.state_below is State.NULL
-        and Condition(
-            lambda c: c.get_relative_cell(1, 1, no_exist_ok=False).has_state(
-                State.SPLASH_LEFT
-            ),
-            default=False,
-        )(c),
-        assign=State.SPLASH_LEFT,
-    )
+        return np.vstack(
+            (
+                (self._grid[0] == State.RAINDROP) & (self._grid[1] == State.RAINDROP),
+                (
+                    (middle_slice == State.RAINDROP)
+                    & (below_slice == State.RAINDROP)
+                    & (above_slice != State.RAINDROP)
+                ),
+                (self._grid[-1] == State.RAINDROP) & (self._grid[-2] != State.RAINDROP),
+            )
+        )
 
-    splash_right = Rule(
-        condition=lambda c: Condition.cell_at_height(c, -2)
-        and c.state_below is State.NULL
-        and Condition(
-            lambda c: c.get_relative_cell(-1, 1, no_exist_ok=False).has_state(
-                State.RAINDROP
-            ),
-            default=False,
-        )(c),
-        assign=State.SPLASH_RIGHT,
-    )
+    @Grid.rule(State.SPLASH_LEFT, target_slice=(-2, slice(None, -1)))
+    def splash_left(self, target_slice: TargetSlice) -> Mask:
+        """Create a splash to the left."""
+        above_splashable = self._grid[-2, slice(1, None)]
+        splashable = self._grid[-1, slice(1, None)]
+        splashing = (splashable == State.RAINDROP) & (above_splashable != State.RAINDROP)
 
-    splash_right_high = Rule(
-        condition=lambda c: Condition.cell_at_height(c, -3)
-        and c.state_below is State.NULL
-        and Condition(
-            lambda c: c.get_relative_cell(-1, 1, no_exist_ok=False).has_state(
-                State.SPLASH_RIGHT
-            ),
-            default=False,
-        )(c),
-        assign=State.SPLASH_RIGHT,
-    )
+        splash_spots = self._grid[*target_slice]
+        spots_are_free = splash_spots == State.NULL
 
-    remove_splash_low = Rule(
-        condition=Condition.check_height(-2),
-        assign=State.NULL,
-    )
+        below_splashes = self._grid[-1, slice(None, -1)]
+        # TODO this would be better as "will be NULL", instead of "is NULL"
+        clear_below = below_splashes == State.NULL
 
-    remove_splash_high = Rule(
-        condition=Condition.check_height(-3),
-        assign=State.SPLASHDROP,
-    )
+        return splashing & spots_are_free & clear_below  # type: ignore[no-any-return]
 
-    return Grid(
-        height,
-        rules={
-            State.NULL: [
-                raindrop_generator,
-                bottom_of_rain_down,
-                splashdrop_down,
-                splash_left,
-                splash_left_high,
-                splash_right,
-                splash_right_high,
-            ],
-            State.RAINDROP: [top_of_raindrop_down],
-            State.SPLASHDROP: [nullify],
-            State.SPLASH_LEFT: [remove_splash_low, remove_splash_high],
-            State.SPLASH_RIGHT: [remove_splash_low, remove_splash_high],
-        },
-    )
+    @Grid.rule(State.SPLASH_RIGHT, target_slice=(-2, slice(1, None)))
+    def splash_right(self, target_slice: TargetSlice) -> Mask:
+        """Create a splash to the right."""
+        above_splashable = self._grid[-2, slice(None, -1)]
+        splashable = self._grid[-1, slice(None, -1)]
+        splashing = (splashable == State.RAINDROP) & (above_splashable != State.RAINDROP)
+
+        splash_spots = self._grid[*target_slice]
+        spots_are_free = splash_spots == State.NULL
+
+        below_splashes = self._grid[-1, slice(1, None)]
+        # TODO this would be better as "will be NULL", instead of "is NULL"
+        clear_below = below_splashes == State.NULL
+
+        return splashing & spots_are_free & clear_below  # type: ignore[no-any-return]
+
+    @Grid.rule(State.SPLASH_LEFT, target_slice=(-3, slice(None, -1)))
+    def splash_left_high(self) -> Mask:
+        """Continue the splash to the left."""
+        return (  # type: ignore[no-any-return]
+            self._grid[-2, slice(1, None)] == State.SPLASH_LEFT
+        )  # & self._grid[-3, :-1] will be NULL
+
+    @Grid.rule(State.SPLASH_RIGHT, target_slice=(-3, slice(1, None)))
+    def splash_right_high(self) -> Mask:
+        """Continue the splash to the right."""
+        return self._grid[-2, slice(None, -1)] == State.SPLASH_RIGHT  # type: ignore[no-any-return]
+
+    @Grid.rule(State.NULL, target_slice=(slice(-3, None), slice(None)))
+    def remove_splashes(self, target_slice: TargetSlice) -> Mask:
+        """Remove any splashes - they only last one frame."""
+        splash_zone = self._grid[*target_slice]
+
+        return (  # type: ignore[no-any-return]
+            (splash_zone == State.SPLASH_LEFT)
+            | (splash_zone == State.SPLASHDROP)
+            | (splash_zone == State.SPLASH_RIGHT)
+        )
+
+    @Grid.rule(State.SPLASHDROP, target_slice=-3)
+    def create_splashdrop(self, target_slice: TargetSlice) -> Mask:
+        """Create a splashdrop."""
+        return (self._grid[target_slice] == State.SPLASH_LEFT) | (  # type: ignore[no-any-return]
+            self._grid[target_slice] == State.SPLASH_RIGHT
+        )
+
+    @Grid.rule(State.SPLASHDROP, target_slice=(slice(1, None), slice(None)))
+    def move_splashdrop_down(self, target_slice: TargetSlice) -> Mask:
+        """Move the splashdrop down."""
+        lower_slice = self._grid[*target_slice]
+        upper_slice = self._grid[:-1, slice(None)]
+
+        return (upper_slice == State.SPLASHDROP) & (lower_slice == State.NULL)  # type: ignore[no-any-return]
 
 
 class Matrix:
@@ -147,53 +157,24 @@ class Matrix:
         self.matrix = RGBMatrix(options=options)
         self.canvas = self.matrix.CreateFrameCanvas()
 
-    def update_cell(self, cell: Cell, /) -> None:
-        """Update the cell on the LED matrix."""
-        if not cell.has_state(cell.previous_frame_state):
-            self.canvas.SetPixel(cell.x, cell.y, cell.state.r, cell.state.g, cell.state.b)
+    def render_array(self, array: NDArray[np.int_]) -> None:
+        """Render the array to the LED matrix."""
+        for (y, x), state in np.ndenumerate(array):
+            self.canvas.SetPixel(x, y, *State.by_value(state).color)
 
-    def render_frame(self, rows: Rows) -> None:
-        """Render the frame to the LED matrix."""
-        for row in rows:
-            for cell in row:
-                self.update_cell(cell)
-
-        self.swap_on_vsync(None)
-
-    def swap_on_vsync(self, _: Any) -> None:
-        """Swap the canvas on the vertical sync."""
         self.matrix.SwapOnVSync(self.canvas)
 
 
 def main() -> None:
     """Run the rain simulation."""
-
     matrix = Matrix()
 
-    grid = define_grid(height=64)
+    size = 64
 
-    grid.run(cell_callback=matrix.update_cell, frame_callback=matrix.swap_on_vsync)
+    grid = RainingGrid(size)
 
-
-def rough_benchmark() -> None:
-    """Rough benchmark of the rain simulation."""
-    matrix = Matrix()
-    grid = define_grid(height=32)
-
-    times = []
-
-    for _ in range(10):
-        start = time()
-        grid.run(
-            cell_callback=matrix.update_cell,
-            frame_callback=matrix.swap_on_vsync,
-            limit=1000,
-        )
-        times.append(time() - start)
-
-        print(f"Rough benchmark: {times[-1]:.2f} seconds")
-
-    print(f"Average time: {sum(times) / len(times):.2f} seconds")
+    for frame in grid.frames:
+        matrix.render_array(frame)
 
 
 if __name__ == "__main__":
