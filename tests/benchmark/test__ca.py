@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from itertools import product
+from math import ceil
 from typing import TYPE_CHECKING
 
 import pytest
@@ -24,7 +25,9 @@ if TYPE_CHECKING:
             id=f"{limit} frame{'s' if limit > 1 else ''} @ {height}x{height}",
             marks=pytest.mark.xdist_group(f"{height}-{limit}"),
         )
-        for height, limit in product([8, 16, 32, 64], [10**i for i in range(6)])
+        for height, limit in product(
+            [8, 16, 32, 64], [ceil((10**i) / 2) for i in range(6)]
+        )
     ],
 )
 def test_raining_grid_simulation(

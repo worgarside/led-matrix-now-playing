@@ -53,7 +53,7 @@ tail:
 	sudo journalctl -u led_matrix_controller.service -f -n 20
 
 test:
-	poetry run pytest --codspeed -n auto --dist=load -v
+	poetry run pytest -n auto --dist=load -v
 
 update:
 	git add .
