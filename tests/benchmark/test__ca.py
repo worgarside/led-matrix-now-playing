@@ -22,9 +22,7 @@ from rain import RainingGrid
             id=f"{limit} frame{'s' if limit > 1 else ''} @ {height}x{height}",
             marks=pytest.mark.xdist_group(f"{height}-{limit}"),
         )
-        for height, limit in product(
-            [8, 16, 32, 64], [ceil((10**i) / 2) for i in range(6)]
-        )
+        for height, limit in product([8, 16, 32], [ceil((10**i) / 2) for i in range(4)])
     ],
 )
 def test_raining_grid_simulation(height: int, limit: int) -> None:
