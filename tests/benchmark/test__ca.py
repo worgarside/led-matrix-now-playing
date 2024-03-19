@@ -4,15 +4,12 @@ from __future__ import annotations
 
 from itertools import product
 from math import ceil
-from typing import TYPE_CHECKING
 
 import pytest
 from rain import RainingGrid
 
-if TYPE_CHECKING:
-    from pytest_codspeed.plugin import BenchmarkFixture  # type: ignore[import-untyped]
 
-
+@pytest.mark.benchmark()
 @pytest.mark.parametrize(
     (
         "height",
@@ -30,14 +27,9 @@ if TYPE_CHECKING:
         )
     ],
 )
-def test_raining_grid_simulation(
-    benchmark: BenchmarkFixture, height: int, limit: int
-) -> None:
+def test_raining_grid_simulation(height: int, limit: int) -> None:
     """Benchmark the CA."""
     grid = RainingGrid(height)
 
-    @benchmark  # type: ignore[misc]
-    def run_simulation() -> None:
-        """Run the simulation."""
-        for _ in grid.run(limit=limit):
-            pass
+    for _ in grid.run(limit=limit):
+        pass
