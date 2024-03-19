@@ -23,7 +23,14 @@ pytest-env = "^1.1.3"
 pytest-xdist = "^3.5.0"
 
 [tool.pytest.ini_options]
-addopts = ["-ra", "--strict-markers", "--strict-config", "-n", "auto"]
+addopts = [
+  "-ra",
+  "--strict-markers",
+  "--strict-config",
+  "-n",
+  "auto",
+  "--dist=load",
+]
 xfail_strict = true
 log_cli_level = "warning"
 pythonpath = ["led_matrix_controller"]
