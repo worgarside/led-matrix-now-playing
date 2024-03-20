@@ -5,6 +5,8 @@ from __future__ import annotations
 from os import environ, getenv
 from typing import Final
 
+import numpy as np
+
 MQTT_USERNAME: Final[str] = environ["MQTT_USERNAME"]
 MQTT_PASSWORD: Final[str] = environ["MQTT_PASSWORD"]
 
@@ -19,3 +21,6 @@ HA_FORCE_UPDATE_TOPIC: Final[str] = "/home-assistant/script/mtrxpi_update_displa
 FONT_WIDTH: Final[int] = 5
 FONT_HEIGHT: Final[int] = 7
 SCROLL_INCREMENT_DISTANCE: Final[int] = 2 * FONT_WIDTH
+
+
+RNG = np.random.default_rng()
