@@ -24,6 +24,16 @@ class State(StateBase):
     SPLASH_LEFT = 3, "*", (170, 197, 250)
     SPLASH_RIGHT = 4, "*", (170, 197, 250)
 
+    @staticmethod
+    def active_splashes() -> tuple[int, int]:
+        """Return the active splash states."""
+        return State.SPLASH_LEFT.state, State.SPLASH_RIGHT.state
+
+    @staticmethod
+    def any_splash() -> tuple[int, int, int]:
+        """Return any splash state."""
+        return State.SPLASH_LEFT.state, State.SPLASH_RIGHT.state, State.SPLASHDROP.state
+
 
 class RainingGrid(Grid):
     """Basic rain simulation."""
@@ -39,9 +49,7 @@ class RainingGrid(Grid):
         lower_slice = self._grid[*target_slice]
         upper_slice = self._grid[:-1, :]
 
-        mask: Mask = (upper_slice == State.RAINDROP) & (lower_slice == State.NULL)
-
-        return mask
+        return (upper_slice == State.RAINDROP) & (lower_slice == State.NULL)  # type: ignore[no-any-return]
 
     @Grid.rule(State.NULL)
     def top_of_rain_down(self) -> Mask:
@@ -83,16 +91,16 @@ class RainingGrid(Grid):
         """Create a splash to the right."""
         above_splashable = self._grid[-2, slice(None, -1)]
         splashable = self._grid[-1, slice(None, -1)]
-        splashing = (splashable == State.RAINDROP) & (above_splashable != State.RAINDROP)
-
         splash_spots = self._grid[*target_slice]
-        spots_are_free = splash_spots == State.NULL
-
         below_splashes = self._grid[-1, slice(1, None)]
-        # TODO this would be better as "will be NULL", instead of "is NULL"
-        clear_below = below_splashes == State.NULL
 
-        return splashing & spots_are_free & clear_below  # type: ignore[no-any-return]
+        # TODO this would be better as "will be NULL", instead of "is NULL"
+        return (  # type: ignore[no-any-return]
+            (splashable == State.RAINDROP)
+            & (above_splashable != State.RAINDROP)
+            & (splash_spots == State.NULL)
+            & (below_splashes == State.NULL)
+        )
 
     @Grid.rule(State.SPLASH_LEFT, target_slice=(-3, slice(None, -1)))
     def splash_left_high(self) -> Mask:
@@ -109,20 +117,12 @@ class RainingGrid(Grid):
     @Grid.rule(State.NULL, target_slice=(slice(-3, None), slice(None)))
     def remove_splashes(self, target_slice: TargetSlice) -> Mask:
         """Remove any splashes - they only last one frame."""
-        splash_zone = self._grid[*target_slice]
-
-        return (  # type: ignore[no-any-return]
-            (splash_zone == State.SPLASH_LEFT)
-            | (splash_zone == State.SPLASHDROP)
-            | (splash_zone == State.SPLASH_RIGHT)
-        )
+        return np.isin(self._grid[*target_slice], State.any_splash())
 
     @Grid.rule(State.SPLASHDROP, target_slice=-3)
     def create_splashdrop(self, target_slice: TargetSlice) -> Mask:
         """Create a splashdrop."""
-        return (self._grid[target_slice] == State.SPLASH_LEFT) | (  # type: ignore[no-any-return]
-            self._grid[target_slice] == State.SPLASH_RIGHT
-        )
+        return np.isin(self._grid[target_slice], State.active_splashes())
 
     @Grid.rule(State.SPLASHDROP, target_slice=(slice(1, None), slice(None)))
     def move_splashdrop_down(self, target_slice: TargetSlice) -> Mask:
