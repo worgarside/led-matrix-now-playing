@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from itertools import product
+from math import ceil
 from typing import TYPE_CHECKING
 
 import pytest
@@ -24,7 +25,9 @@ if TYPE_CHECKING:
             id=f"{limit} frame{'s' if limit > 1 else ''} @ {height}x{height}",
             marks=pytest.mark.xdist_group(f"{height}-{limit}"),
         )
-        for height, limit in product([8, 16, 32, 64], [1, 10, 100, 1000, 10000])
+        for height, limit in product(
+            [8, 16, 32, 64], [ceil((10**i) / 2) for i in range(4)]
+        )
     ],
 )
 def test_ca(benchmark: BenchmarkFixture, height: int, limit: int) -> None:
