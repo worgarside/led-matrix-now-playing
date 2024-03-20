@@ -23,4 +23,4 @@ FONT_HEIGHT: Final[int] = 7
 SCROLL_INCREMENT_DISTANCE: Final[int] = 2 * FONT_WIDTH
 
 
-RNG = np.random.default_rng()
+RNG = np.random.default_rng(830003040)
