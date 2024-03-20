@@ -25,7 +25,9 @@ if TYPE_CHECKING:
             id=f"{limit} frame{'s' if limit > 1 else ''} @ {height}x{height}",
             marks=pytest.mark.xdist_group(f"{height}-{limit}"),
         )
-        for height, limit in product([8, 16, 32], [ceil((10**i) / 2) for i in range(4)])
+        for height, limit in product(
+            [8, 16, 32, 64], [ceil((10**i) / 2) for i in range(4)]
+        )
     ],
 )
 def test_ca(benchmark: BenchmarkFixture, height: int, limit: int) -> None:
