@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from enum import unique
+from functools import lru_cache
 from typing import TYPE_CHECKING, ClassVar
 
 import numpy as np
@@ -25,11 +26,13 @@ class State(StateBase):
     SPLASH_LEFT = 3, "*", (170, 197, 250)
     SPLASH_RIGHT = 4, "*", (170, 197, 250)
 
+    @lru_cache(maxsize=1)
     @staticmethod
     def active_splashes() -> tuple[int, int]:
         """Return the active splash states."""
         return State.SPLASH_LEFT.state, State.SPLASH_RIGHT.state
 
+    @lru_cache(maxsize=1)
     @staticmethod
     def any_splash() -> tuple[int, int, int]:
         """Return any splash state."""
