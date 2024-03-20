@@ -30,7 +30,9 @@ if TYPE_CHECKING:
         )
     ],
 )
-def test_ca(benchmark: BenchmarkFixture, height: int, limit: int) -> None:
+def test_raining_grid_simulation(
+    benchmark: BenchmarkFixture, height: int, limit: int
+) -> None:
     """Benchmark the CA."""
     grid = define_grid(height=height)
 
