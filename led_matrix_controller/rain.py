@@ -58,21 +58,19 @@ class RainingGrid(Grid):
     @Grid.rule(State.NULL)
     def top_of_rain_down(self) -> Mask:
         """Move the top of a raindrop down."""
-        middle_slice = self._grid[slice(1, -1), slice(None)]
-        above_slice = self._grid[slice(None, -2), slice(None)]
-        below_slice = self._grid[slice(2, None), slice(None)]
+        mask = np.full((self.height, self.width), fill_value=False)
 
-        return np.vstack(
-            (
-                (self._grid[0] == State.RAINDROP) & (self._grid[1] == State.RAINDROP),
-                (
-                    (middle_slice == State.RAINDROP)
-                    & (below_slice == State.RAINDROP)
-                    & (above_slice != State.RAINDROP)
-                ),
-                (self._grid[-1] == State.RAINDROP) & (self._grid[-2] != State.RAINDROP),
-            )
+        mask[0] = (self._grid[0] == State.RAINDROP) & (self._grid[1] == State.RAINDROP)
+
+        mask[1:-1] = (
+            (self._grid[1:-1] == State.RAINDROP)
+            & (self._grid[2:] == State.RAINDROP)
+            & (self._grid[:-2] != State.RAINDROP)
         )
+
+        mask[-1] = (self._grid[-1] == State.RAINDROP) & (self._grid[-2] != State.RAINDROP)
+
+        return mask
 
     @Grid.rule(State.SPLASH_LEFT, target_slice=(-2, slice(None, -1)))
     def splash_left(self, target_slice: TargetSlice) -> Mask:
