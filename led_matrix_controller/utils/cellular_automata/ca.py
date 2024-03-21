@@ -13,6 +13,7 @@ import numpy as np
 from numpy.typing import DTypeLike, NDArray
 
 _BY_VALUE: dict[int, StateBase] = {}
+EVERYWHERE = (slice(None), slice(None))
 
 
 # TODO can this be an ABC?
@@ -79,7 +80,7 @@ class Grid:
         cls,
         to_state: StateBase,
         *,
-        target_slice: TargetSliceDecVal | None = None,
+        target_slice: TargetSliceDecVal = EVERYWHERE,
     ) -> Callable[[Callable[..., Mask]], Callable[..., Mask]]:
         """Decorator to add a rule to the grid.
 
@@ -87,8 +88,6 @@ class Grid:
             to_state (StateBase): The state to change to.
             target_slice (TargetSliceDecVal | None, optional): The slice to target. Defaults to entire grid.
         """
-        if target_slice is None:
-            target_slice = (slice(None), slice(None))
 
         def decorator(func: Callable[..., Mask]) -> Grid.Rule:
             if "target_slice" in inspect.signature(func).parameters:
@@ -136,3 +135,21 @@ class Grid:
     def str_repr(self) -> str:
         """Return a string representation of the grid."""
         return "\n".join(" ".join(state.char for state in row) for row in self._grid)
+
+    @staticmethod
+    def translate_slice(slice_: TargetSlice, /, x: int = 0, y: int = 0) -> TargetSlice:
+        """Translate a slice by x and y."""
+        x_slice, y_slice = slice_
+
+        return (
+            slice(
+                x_slice.start + x if x_slice.start is not None else None,
+                x_slice.stop + x if x_slice.stop is not None else None,
+                x_slice.step,
+            ),
+            slice(
+                y_slice.start + y if y_slice.start is not None else None,
+                y_slice.stop + y if y_slice.stop is not None else None,
+                y_slice.step,
+            ),
+        )
