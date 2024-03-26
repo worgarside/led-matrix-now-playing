@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 @pytest.mark.parametrize(
     (
-        "height",
+        "size",
         "limit",
     ),
     [
