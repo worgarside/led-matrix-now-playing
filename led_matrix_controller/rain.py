@@ -4,12 +4,11 @@ from __future__ import annotations
 
 from enum import unique
 from functools import lru_cache
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 import numpy as np
 from models import RGBMatrix, RGBMatrixOptions
-from utils import const
-from utils.cellular_automata.ca import Grid, Mask, StateBase, TargetSlice
+from utils.cellular_automata.ca import Direction, Grid, Mask, StateBase, TargetSlice
 
 if TYPE_CHECKING:
     from models.matrix import LedMatrixOptionsInfo
@@ -43,98 +42,121 @@ class RainingGrid(Grid):
     """Basic rain simulation."""
 
     @Grid.rule(State.RAINDROP, target_slice=0)
-    def generate_raindrops(self) -> Mask:
+    def generate_raindrops(self, target_slice: TargetSlice) -> Mask:
         """Generate raindrops at the top of the grid."""
-        return const.RNG.random(self.width) < 0.025  # noqa: PLR2004
+        return np.random.default_rng().random(self[*target_slice].shape) < 0.025  # noqa: PLR2004
 
     @Grid.rule(State.RAINDROP, target_slice=(slice(1, None), slice(None)))
     def move_rain_down(self, target_slice: TargetSlice) -> Mask:
         """Move raindrops down one cell."""
-        lower_slice = self._grid[*target_slice]
-        upper_slice = self._grid[:-1, :]
+        lower_slice = self[target_slice]
+        upper_slice = self[self.translate_slice(target_slice, vrt=Direction.UP)]
 
         return (upper_slice == State.RAINDROP) & (lower_slice == State.NULL)  # type: ignore[no-any-return]
 
     @Grid.rule(State.NULL)
-    def top_of_rain_down(self) -> Mask:
+    def top_of_rain_down(self, _: TargetSlice) -> Mask:
         """Move the top of a raindrop down."""
-        middle_slice = self._grid[slice(1, -1), slice(None)]
-        above_slice = self._grid[slice(None, -2), slice(None)]
-        below_slice = self._grid[slice(2, None), slice(None)]
+        middle_slice = self[slice(1, -1), slice(None)]
+        above_slice = self[slice(None, -2), slice(None)]
+        below_slice = self[slice(2, None), slice(None)]
 
         return np.vstack(
             (
-                (self._grid[0] == State.RAINDROP) & (self._grid[1] == State.RAINDROP),
+                (self[0] == State.RAINDROP) & (self[1] == State.RAINDROP),
                 (
                     (middle_slice == State.RAINDROP)
                     & (below_slice == State.RAINDROP)
                     & (above_slice != State.RAINDROP)
                 ),
-                (self._grid[-1] == State.RAINDROP) & (self._grid[-2] != State.RAINDROP),
+                (self[-1] == State.RAINDROP) & (self[-2] != State.RAINDROP),
             )
         )
+
+    def _splash(
+        self,
+        target_slice: TargetSlice,
+        *,
+        source_slice_direction: Literal[Direction.LEFT, Direction.RIGHT],
+    ) -> Mask:
+        # TODO this would be better as "will be NULL", instead of "is NULL"
+        source_slice = self[
+            self.translate_slice(
+                target_slice, vrt=Direction.DOWN, hrz=source_slice_direction
+            )
+        ]
+        splashing = source_slice == State.RAINDROP
+        free_splash_spots = self[target_slice] == State.NULL
+        clear_below = (
+            self[self.translate_slice(target_slice, vrt=Direction.DOWN)] == State.NULL
+        )
+
+        return splashing & free_splash_spots & clear_below  # type: ignore[no-any-return]
 
     @Grid.rule(State.SPLASH_LEFT, target_slice=(-2, slice(None, -1)))
     def splash_left(self, target_slice: TargetSlice) -> Mask:
         """Create a splash to the left."""
-        above_splashable = self._grid[-2, slice(1, None)]
-        splashable = self._grid[-1, slice(1, None)]
-        splashing = (splashable == State.RAINDROP) & (above_splashable != State.RAINDROP)
-
-        splash_spots = self._grid[*target_slice]
-        spots_are_free = splash_spots == State.NULL
-
-        below_splashes = self._grid[-1, slice(None, -1)]
-        # TODO this would be better as "will be NULL", instead of "is NULL"
-        clear_below = below_splashes == State.NULL
-
-        return splashing & spots_are_free & clear_below  # type: ignore[no-any-return]
+        return self._splash(target_slice, source_slice_direction=Direction.RIGHT)
 
     @Grid.rule(State.SPLASH_RIGHT, target_slice=(-2, slice(1, None)))
     def splash_right(self, target_slice: TargetSlice) -> Mask:
         """Create a splash to the right."""
-        above_splashable = self._grid[-2, slice(None, -1)]
-        splashable = self._grid[-1, slice(None, -1)]
-        splash_spots = self._grid[*target_slice]
-        below_splashes = self._grid[-1, slice(1, None)]
+        return self._splash(target_slice, source_slice_direction=Direction.LEFT)
 
-        # TODO this would be better as "will be NULL", instead of "is NULL"
+    def _splash_high(
+        self,
+        target_slice: TargetSlice,
+        *,
+        splash_state: State,
+        source_slice_direction: Literal[Direction.LEFT, Direction.RIGHT],
+    ) -> Mask:
+        source_slice = self[
+            self.translate_slice(
+                target_slice,
+                vrt=Direction.DOWN,
+                hrz=source_slice_direction,
+            )
+        ]
+
         return (  # type: ignore[no-any-return]
-            (splashable == State.RAINDROP)
-            & (above_splashable != State.RAINDROP)
-            & (splash_spots == State.NULL)
-            & (below_splashes == State.NULL)
-        )
+            source_slice == splash_state
+        )  # & self[target_slice] will be NULL
 
     @Grid.rule(State.SPLASH_LEFT, target_slice=(-3, slice(None, -1)))
-    def splash_left_high(self) -> Mask:
+    def splash_left_high(self, target_slice: TargetSlice) -> Mask:
         """Continue the splash to the left."""
-        return (  # type: ignore[no-any-return]
-            self._grid[-2, slice(1, None)] == State.SPLASH_LEFT
-        )  # & self._grid[-3, :-1] will be NULL
+        return self._splash_high(
+            target_slice,
+            splash_state=State.SPLASH_LEFT,
+            source_slice_direction=Direction.RIGHT,
+        )
 
     @Grid.rule(State.SPLASH_RIGHT, target_slice=(-3, slice(1, None)))
-    def splash_right_high(self) -> Mask:
+    def splash_right_high(self, target_slice: TargetSlice) -> Mask:
         """Continue the splash to the right."""
-        return self._grid[-2, slice(None, -1)] == State.SPLASH_RIGHT  # type: ignore[no-any-return]
+        return self._splash_high(
+            target_slice,
+            splash_state=State.SPLASH_RIGHT,
+            source_slice_direction=Direction.LEFT,
+        )
 
     @Grid.rule(State.NULL, target_slice=(slice(-3, None), slice(None)))
     def remove_splashes(self, target_slice: TargetSlice) -> Mask:
         """Remove any splashes - they only last one frame."""
-        return np.isin(self._grid[*target_slice], State.any_splash())
+        return np.isin(self[target_slice], State.any_splash())
 
     @Grid.rule(State.SPLASHDROP, target_slice=-3)
     def create_splashdrop(self, target_slice: TargetSlice) -> Mask:
-        """Create a splashdrop."""
-        return np.isin(self._grid[target_slice], State.active_splashes())
+        """Convert a splash to a splashdrop."""
+        return np.isin(self[target_slice], State.active_splashes())
 
-    @Grid.rule(State.SPLASHDROP, target_slice=(slice(1, None), slice(None)))
+    @Grid.rule(State.SPLASHDROP, target_slice=(slice(-3, None)))
     def move_splashdrop_down(self, target_slice: TargetSlice) -> Mask:
         """Move the splashdrop down."""
-        lower_slice = self._grid[*target_slice]
-        upper_slice = self._grid[:-1, slice(None)]
+        source_slice = self[self.translate_slice(target_slice, vrt=Direction.UP)]
 
-        return (upper_slice == State.SPLASHDROP) & (lower_slice == State.NULL)  # type: ignore[no-any-return]
+        return source_slice == State.SPLASHDROP  # type: ignore[no-any-return]
+        # & self[target_slice] will be State.NULL
 
 
 class Matrix:
@@ -175,7 +197,7 @@ def main() -> None:
 
     size = 64
 
-    grid = RainingGrid(size)
+    grid = RainingGrid(size, size)
 
     for frame in grid.frames:
         matrix.render_array(frame)

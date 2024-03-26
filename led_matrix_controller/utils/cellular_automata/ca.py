@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import inspect
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, IntEnum
 from functools import wraps
 from itertools import islice
 from typing import Any, Callable, ClassVar, Generator, Self
@@ -14,6 +13,15 @@ from numpy.typing import DTypeLike, NDArray
 
 _BY_VALUE: dict[int, StateBase] = {}
 EVERYWHERE = (slice(None), slice(None))
+
+
+class Direction(IntEnum):
+    """Enum representing the direction of a cell."""
+
+    LEFT = -1
+    RIGHT = 1
+    UP = -1
+    DOWN = 1
 
 
 # TODO can this be an ABC?
@@ -60,7 +68,7 @@ class Grid:
     """Base class for a grid of cells."""
 
     height: int
-    width: int = -1
+    width: int
 
     frame_index: int = 0
 
@@ -68,11 +76,20 @@ class Grid:
 
     Rule: ClassVar = Callable[[Self], Mask]
 
+    class OutOfBoundsError(ValueError):
+        """Error for when a slice goes out of bounds."""
+
+        def __init__(self, current: int | None, delta: int, limit: int) -> None:
+            """Initialize the OutOfBoundsError."""
+
+            self.current = current
+            self.delta = delta
+            self.limit = limit
+
+            super().__init__(f"Out of bounds: {current} + {delta} > {limit}")
+
     def __post_init__(self) -> None:
         """Set the calculated attributes of the Grid."""
-        if self.width == -1:
-            self.width = self.height
-
         self._grid: NDArray[np.int_] = self.zeros()
 
     @classmethod
@@ -81,27 +98,40 @@ class Grid:
         to_state: StateBase,
         *,
         target_slice: TargetSliceDecVal = EVERYWHERE,
-    ) -> Callable[[Callable[..., Mask]], Callable[..., Mask]]:
+    ) -> Callable[[Callable[[Any, TargetSlice], Mask]], Callable[..., Mask]]:
         """Decorator to add a rule to the grid.
 
         Args:
             to_state (StateBase): The state to change to.
             target_slice (TargetSliceDecVal | None, optional): The slice to target. Defaults to entire grid.
         """
+        match target_slice:
+            case int(n):
+                actual_slice = (slice(n, n + 1), slice(None))
+            case slice(start=x_start, stop=x_stop, step=x_step):
+                actual_slice = (slice(x_start, x_stop, x_step), slice(None))
+            case (int(n), slice(start=y_start, stop=y_stop, step=y_step)):
+                actual_slice = (slice(n, n + 1), slice(y_start, y_stop, y_step))
+            case (slice(start=x_start, stop=x_stop, step=x_step), int(y)):
+                actual_slice = (slice(x_start, x_stop, x_step), slice(y, y + 1))
+            case (
+                slice(start=x_start, stop=x_stop, step=x_step),
+                slice(start=y_start, stop=y_stop, step=y_step),
+            ):
+                actual_slice = (
+                    slice(x_start, x_stop, x_step),
+                    slice(y_start, y_stop, y_step),
+                )
+            case _:
+                raise ValueError(f"Invalid target_slice: {target_slice}")
 
-        def decorator(func: Callable[..., Mask]) -> Grid.Rule:
-            if "target_slice" in inspect.signature(func).parameters:
+        def decorator(func: Callable[[Grid, TargetSlice], Mask]) -> Grid.Rule:
+            @wraps(func)
+            def wrapper(grid: Grid) -> Mask:
+                return func(grid, actual_slice)
 
-                @wraps(func)
-                def wrapper(self: Grid) -> Mask:
-                    return func(self, target_slice)
-            else:
+            cls._RULES.append((actual_slice, wrapper, to_state))
 
-                @wraps(func)
-                def wrapper(self: Grid) -> Mask:
-                    return func(self)
-
-            cls._RULES.append((target_slice, wrapper, to_state))
             return wrapper
 
         return decorator
@@ -137,19 +167,123 @@ class Grid:
         return "\n".join(" ".join(state.char for state in row) for row in self._grid)
 
     @staticmethod
-    def translate_slice(slice_: TargetSlice, /, x: int = 0, y: int = 0) -> TargetSlice:
-        """Translate a slice by x and y."""
-        x_slice, y_slice = slice_
+    def _translate_slice_start(
+        *, current: int | None, delta: int, size: int
+    ) -> int | None:
+        """Translate the start of a slice by a given delta.
+
+        Takes into account the limit of the grid: returns None if the slice goes out of bounds in a negative
+        direction; raises an error if the slice goes out of bounds in a positive direction (because this means
+        the entire slice has gone off the grid).
+
+        Args:
+            delta (int): The translation delta.
+            current (int | None): The current start of the slice.
+            size (int): The limit of the grid (either its height or width, depending on the slice direction)
+
+        Returns:
+            int | None: The new start of the slice.
+        """
+        if delta > 0:
+            # Right/Down - can go OOB (trailing edge == off-grid in this direction)
+            new_value = (current or 0) + delta
+
+            upper_bound = (size - 1) if current is None or current >= 0 else -1
+            if new_value > upper_bound:  # Gone off grid - not good!
+                raise Grid.OutOfBoundsError(current, delta, size)
+        elif delta < 0:  # Left/Up - can't go OOB
+            if current is None:  # Immediately going off grid, but that's okay
+                new_value = None
+            else:
+                lower_bound = 0 if current >= 0 else -size
+
+                if (new_value := current + delta) < lower_bound:
+                    new_value = None
+        elif delta == 0:  # No change
+            new_value = current
+
+        return new_value
+
+    @staticmethod
+    def _translate_slice_stop(
+        *, current: int | None, delta: int, size: int
+    ) -> int | None:
+        """Translate the stop of a slice by a given delta.
+
+        Takes into account the limit of the grid: returns None if the slice goes out of bounds in a positive
+        direction; raises an error if the slice goes out of bounds in a negative direction (because this means
+        the entire slice has gone off the grid).
+
+        Args:
+            delta (int): The translation delta.
+            current (int | None): The current stop of the slice.
+            size (int): The limit of the grid (either its height or width, depending on the slice direction)
+
+        Returns:
+            int | None: The new stop of the slice.
+        """
+        if delta > 0:
+            # Right/Down - can't go OOB (leading edge beacomes open end in this direction)
+            if current is None:
+                new_value = None
+            else:
+                upper_bound = (size - 1) if current >= 0 else -1
+
+                if (new_value := current + delta) > upper_bound:  # i.e. gone off grid
+                    new_value = None
+        elif delta < 0:
+            # Left/Up - can go OOB (trailing edge == off-grid in this direction)
+            new_value = (current or 0) + delta  # Negative number!
+
+            lower_bound = 0 if current is not None and current >= 0 else -size
+            if new_value < lower_bound:
+                raise Grid.OutOfBoundsError(current, delta, size)
+        elif delta == 0:  # No change
+            new_value = current
+
+        return new_value
+
+    def translate_slice(
+        self,
+        slice_: TargetSlice,
+        /,
+        *,
+        vrt: int = 0,
+        hrz: int = 0,
+    ) -> TargetSlice:
+        """Translate a slice in the vertical (down) and horizontal (right) directions.
+
+        Args:
+            slice_ (TargetSlice): The slice to translate.
+            vrt (int, optional): The vertical translation: positive is down, negative is up. Defaults to 0.
+            hrz (int, optional): The horizontal translation: positive is right, negative is left. Defaults to 0.
+        """
+        rows, cols = slice_
 
         return (
             slice(
-                x_slice.start + x if x_slice.start is not None else None,
-                x_slice.stop + x if x_slice.stop is not None else None,
-                x_slice.step,
+                self._translate_slice_start(
+                    current=rows.start, delta=vrt, size=self.height
+                ),
+                self._translate_slice_stop(
+                    current=rows.stop, delta=vrt, size=self.height
+                ),
+                rows.step,
             ),
             slice(
-                y_slice.start + y if y_slice.start is not None else None,
-                y_slice.stop + y if y_slice.stop is not None else None,
-                y_slice.step,
+                self._translate_slice_start(
+                    current=cols.start, delta=hrz, size=self.width
+                ),
+                self._translate_slice_stop(current=cols.stop, delta=hrz, size=self.width),
+                cols.step,
             ),
         )
+
+    @property
+    def shape(self) -> tuple[int, int]:
+        """Return the shape of the grid."""
+        return self._grid.shape  # type: ignore[return-value]
+
+    def __getitem__(self, key: TargetSliceDecVal) -> NDArray[np.int_]:
+        """Get an item from the grid."""
+        return self._grid[key]

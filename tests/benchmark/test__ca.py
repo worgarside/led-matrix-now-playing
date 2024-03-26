@@ -32,11 +32,11 @@ if TYPE_CHECKING:
 )
 def test_raining_grid_simulation(
     benchmark: BenchmarkFixture,
-    height: int,
+    size: int,
     limit: int,
 ) -> None:
     """Benchmark the CA."""
-    grid = RainingGrid(height)
+    grid = RainingGrid(size, size)
 
     @benchmark  # type: ignore[misc]
     def bench() -> None:
