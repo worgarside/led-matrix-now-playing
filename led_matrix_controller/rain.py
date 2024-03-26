@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, ClassVar, Literal
 
 import numpy as np
 from models import RGBMatrix, RGBMatrixOptions
+from utils import const
 from utils.cellular_automata.ca import Direction, Grid, Mask, StateBase, TargetSlice
 
 if TYPE_CHECKING:
@@ -44,7 +45,7 @@ class RainingGrid(Grid):
     @Grid.rule(State.RAINDROP, target_slice=0)
     def generate_raindrops(self, target_slice: TargetSlice) -> Mask:
         """Generate raindrops at the top of the grid."""
-        return np.random.default_rng().random(self[*target_slice].shape) < 0.025  # noqa: PLR2004
+        return const.RNG.random(self[*target_slice].shape) < 0.025  # noqa: PLR2004
 
     @Grid.rule(State.RAINDROP, target_slice=(slice(1, None), slice(None)))
     def move_rain_down(self, target_slice: TargetSlice) -> Mask:
