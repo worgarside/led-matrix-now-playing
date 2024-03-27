@@ -53,7 +53,7 @@ class RainingGrid(Grid):
         lower_slice = self._grid[*target_slice]
         upper_slice = self._grid[:-1, :]
 
-        return (upper_slice == State.RAINDROP) & (lower_slice == State.NULL)  # type: ignore[no-any-return]
+        return (upper_slice == State.RAINDROP.state) & (lower_slice == State.NULL.state)  # type: ignore[no-any-return]
 
     @Grid.rule(State.NULL)
     def top_of_rain_down(self) -> Mask:
@@ -64,13 +64,15 @@ class RainingGrid(Grid):
 
         return np.vstack(
             (
-                (self._grid[0] == State.RAINDROP) & (self._grid[1] == State.RAINDROP),
+                (self._grid[0] == State.RAINDROP.state)
+                & (self._grid[1] == State.RAINDROP.state),
                 (
-                    (middle_slice == State.RAINDROP)
-                    & (below_slice == State.RAINDROP)
-                    & (above_slice != State.RAINDROP)
+                    (middle_slice == State.RAINDROP.state)
+                    & (below_slice == State.RAINDROP.state)
+                    & (above_slice != State.RAINDROP.state)
                 ),
-                (self._grid[-1] == State.RAINDROP) & (self._grid[-2] != State.RAINDROP),
+                (self._grid[-1] == State.RAINDROP.state)
+                & (self._grid[-2] != State.RAINDROP.state),
             )
         )
 
@@ -79,14 +81,16 @@ class RainingGrid(Grid):
         """Create a splash to the left."""
         above_splashable = self._grid[-2, slice(1, None)]
         splashable = self._grid[-1, slice(1, None)]
-        splashing = (splashable == State.RAINDROP) & (above_splashable != State.RAINDROP)
+        splashing = (splashable == State.RAINDROP.state) & (
+            above_splashable != State.RAINDROP.state
+        )
 
         splash_spots = self._grid[*target_slice]
-        spots_are_free = splash_spots == State.NULL
+        spots_are_free = splash_spots == State.NULL.state
 
         below_splashes = self._grid[-1, slice(None, -1)]
         # TODO this would be better as "will be NULL", instead of "is NULL"
-        clear_below = below_splashes == State.NULL
+        clear_below = below_splashes == State.NULL.state
 
         return splashing & spots_are_free & clear_below  # type: ignore[no-any-return]
 
@@ -100,23 +104,23 @@ class RainingGrid(Grid):
 
         # TODO this would be better as "will be NULL", instead of "is NULL"
         return (  # type: ignore[no-any-return]
-            (splashable == State.RAINDROP)
-            & (above_splashable != State.RAINDROP)
-            & (splash_spots == State.NULL)
-            & (below_splashes == State.NULL)
+            (splashable == State.RAINDROP.state)
+            & (above_splashable != State.RAINDROP.state)
+            & (splash_spots == State.NULL.state)
+            & (below_splashes == State.NULL.state)
         )
 
     @Grid.rule(State.SPLASH_LEFT, target_slice=(-3, slice(None, -1)))
     def splash_left_high(self) -> Mask:
         """Continue the splash to the left."""
         return (  # type: ignore[no-any-return]
-            self._grid[-2, slice(1, None)] == State.SPLASH_LEFT
+            self._grid[-2, slice(1, None)] == State.SPLASH_LEFT.state
         )  # & self._grid[-3, :-1] will be NULL
 
     @Grid.rule(State.SPLASH_RIGHT, target_slice=(-3, slice(1, None)))
     def splash_right_high(self) -> Mask:
         """Continue the splash to the right."""
-        return self._grid[-2, slice(None, -1)] == State.SPLASH_RIGHT  # type: ignore[no-any-return]
+        return self._grid[-2, slice(None, -1)] == State.SPLASH_RIGHT.state  # type: ignore[no-any-return]
 
     @Grid.rule(State.NULL, target_slice=(slice(-3, None), slice(None)))
     def remove_splashes(self, target_slice: TargetSlice) -> Mask:
@@ -134,7 +138,7 @@ class RainingGrid(Grid):
         lower_slice = self._grid[*target_slice]
         upper_slice = self._grid[:-1, slice(None)]
 
-        return (upper_slice == State.SPLASHDROP) & (lower_slice == State.NULL)  # type: ignore[no-any-return]
+        return (upper_slice == State.SPLASHDROP.state) & (lower_slice == State.NULL.state)  # type: ignore[no-any-return]
 
 
 class Matrix:
