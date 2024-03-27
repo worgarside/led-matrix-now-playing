@@ -122,6 +122,8 @@ class Grid:
             case _:
                 raise ValueError(f"Invalid target_slice: {target_slice}")
 
+        del target_slice
+
         def decorator(rule_func: Callable[[Grid, TargetSlice], MaskGen]) -> Grid.Rule:
             @wraps(rule_func)
             def wrapper(grid: Grid) -> MaskGen:
