@@ -40,5 +40,6 @@ def test_raining_grid_simulation(
 
     @benchmark  # type: ignore[misc]
     def bench() -> None:
-        for _ in grid.run(limit=limit):
-            pass
+        for count, _ in enumerate(grid.frames):
+            if count >= limit:
+                break
