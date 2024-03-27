@@ -40,7 +40,7 @@ class RainingGrid(Grid):
     @Grid.rule(State.RAINDROP, target_slice=0)
     def generate_raindrops(self, target_slice: TargetSlice) -> MaskGen:
         """Generate raindrops at the top of the grid."""
-        shape = self[target_slice].shape
+        shape = self._grid[target_slice].shape
 
         def _mask() -> Mask:
             return const.RNG.random(shape) < 0.025  # noqa: PLR2004
@@ -50,8 +50,8 @@ class RainingGrid(Grid):
     @Grid.rule(State.RAINDROP, target_slice=(slice(1, None), slice(None)))
     def move_rain_down(self, target_slice: TargetSlice) -> MaskGen:
         """Move raindrops down one cell."""
-        lower_slice = self[target_slice]
-        upper_slice = self[self.translate_slice(target_slice, vrt=Direction.UP)]
+        lower_slice = self._grid[target_slice]
+        upper_slice = self._grid[self.translate_slice(target_slice, vrt=Direction.UP)]
 
         def _mask() -> Mask:
             return (upper_slice == State.RAINDROP.state) & (  # type: ignore[no-any-return]
@@ -63,21 +63,22 @@ class RainingGrid(Grid):
     @Grid.rule(State.NULL)
     def top_of_rain_down(self, _: TargetSlice) -> MaskGen:
         """Move the top of a raindrop down."""
-        middle_slice = self[slice(1, -1), slice(None)]
-        above_slice = self[slice(None, -2), slice(None)]
-        below_slice = self[slice(2, None), slice(None)]
+        middle_slice = self._grid[slice(1, -1), slice(None)]
+        above_slice = self._grid[slice(None, -2), slice(None)]
+        below_slice = self._grid[slice(2, None), slice(None)]
 
         def _mask() -> Mask:
             return np.vstack(
                 (
-                    (self[0] == State.RAINDROP.state) & (self[1] == State.RAINDROP.state),
+                    (self._grid[0] == State.RAINDROP.state)
+                    & (self._grid[1] == State.RAINDROP.state),
                     (
                         (middle_slice == State.RAINDROP.state)
                         & (below_slice == State.RAINDROP.state)
                         & (above_slice != State.RAINDROP.state)
                     ),
-                    (self[-1] == State.RAINDROP.state)
-                    & (self[-2] != State.RAINDROP.state),
+                    (self._grid[-1] == State.RAINDROP.state)
+                    & (self._grid[-2] != State.RAINDROP.state),
                 )
             )
 
@@ -90,15 +91,15 @@ class RainingGrid(Grid):
         source_slice_direction: Literal[Direction.LEFT, Direction.RIGHT],
     ) -> MaskGen:
         # TODO this would be better as "will be NULL", instead of "is NULL"
-        source_slice = self[
+        source_slice = self._grid[
             self.translate_slice(
                 target_slice,
                 vrt=Direction.DOWN,
                 hrz=source_slice_direction,
             )
         ]
-        splash_spots = self[target_slice]
-        below_slice = self[self.translate_slice(target_slice, vrt=Direction.DOWN)]
+        splash_spots = self._grid[target_slice]
+        below_slice = self._grid[self.translate_slice(target_slice, vrt=Direction.DOWN)]
 
         def _mask() -> Mask:
             return (  # type: ignore[no-any-return]
@@ -126,7 +127,7 @@ class RainingGrid(Grid):
         splash_state: State,
         source_slice_direction: Literal[Direction.LEFT, Direction.RIGHT],
     ) -> MaskGen:
-        source_slice = self[
+        source_slice = self._grid[
             self.translate_slice(
                 target_slice,
                 vrt=Direction.DOWN,
@@ -137,7 +138,7 @@ class RainingGrid(Grid):
         def _mask() -> Mask:
             return (  # type: ignore[no-any-return]
                 source_slice == splash_state.state
-            )  # & self[target_slice] will be NULL
+            )  # & self._grid[target_slice] will be NULL
 
         return _mask
 
@@ -167,7 +168,7 @@ class RainingGrid(Grid):
             State.SPLASH_RIGHT.state,
             State.SPLASHDROP.state,
         )
-        view = self[target_slice]
+        view = self._grid[target_slice]
 
         def _mask() -> Mask:
             return np.isin(view, any_splash)
@@ -178,7 +179,7 @@ class RainingGrid(Grid):
     def create_splashdrop(self, target_slice: TargetSlice) -> MaskGen:
         """Convert a splash to a splashdrop."""
         active_splashes = State.SPLASH_LEFT.state, State.SPLASH_RIGHT.state
-        view = self[target_slice]
+        view = self._grid[target_slice]
 
         def _mask() -> Mask:
             return np.isin(view, active_splashes)
@@ -188,11 +189,11 @@ class RainingGrid(Grid):
     @Grid.rule(State.SPLASHDROP, target_slice=(slice(-3, None)))
     def move_splashdrop_down(self, target_slice: TargetSlice) -> MaskGen:
         """Move the splashdrop down."""
-        source_slice = self[self.translate_slice(target_slice, vrt=Direction.UP)]
+        source_slice = self._grid[self.translate_slice(target_slice, vrt=Direction.UP)]
 
         def _mask() -> Mask:
             return source_slice == State.SPLASHDROP.state  # type: ignore[no-any-return]
-            # & self[target_slice] will be State.NULL
+            # & self._grid[target_slice] will be State.NULL
 
         return _mask
 
@@ -228,7 +229,7 @@ class Matrix:
 
         pixels = self.COLORMAP[array]
 
-        image = Image.fromarray(pixels.astype("uint8"), "RGB")
+        image = Image.fromarray(pixels.astype(np.uint8), "RGB")
 
         self.canvas.SetImage(image)
         self.canvas = self.matrix.SwapOnVSync(self.canvas)
