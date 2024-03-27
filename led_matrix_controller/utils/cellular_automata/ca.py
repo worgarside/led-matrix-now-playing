@@ -39,16 +39,6 @@ class StateBase(Enum):
         """Return the state by its value."""
         return _BY_VALUE[int(value)]
 
-    def __eq__(self, __value: object) -> bool:
-        """Check if a value (either another State or an int) is equal to this State."""
-        if isinstance(__value, int):
-            return bool(int(self._value_) == __value)
-
-        if not isinstance(__value, StateBase):
-            return False
-
-        return bool(self.value == __value.value)
-
     def __hash__(self) -> int:
         """Return the hash of the value of the state."""
         return hash(self.value)
