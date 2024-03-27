@@ -12,7 +12,7 @@ from rain import RainingGrid
 
 if TYPE_CHECKING:
     from pytest_codspeed import BenchmarkFixture  # type: ignore[import-untyped]
-    from utils.cellular_automata.ca import Mask
+    from utils.cellular_automata.ca import MaskGen
 
 
 @pytest.mark.parametrize(
@@ -62,7 +62,7 @@ def test_rules(
     benchmark: BenchmarkFixture,
     size: int,
     limit: int,
-    rule: Callable[..., Mask],
+    rule: Callable[..., MaskGen],
 ) -> None:
     """Test/benchmark each individual rule."""
     grid = RainingGrid(size, size)
@@ -77,11 +77,19 @@ def test_rules(
 
     grids_to_eval = [deepcopy(grid) for _ in islice(grid.frames, limit)]
 
+    assert len(grids_to_eval) == limit
+
     for g in grids_to_eval:
         assert g.frame_index == expected_frame_index
         expected_frame_index += 1
 
+    mask_generators = [rule(grid) for grid in grids_to_eval]
+
     @benchmark  # type: ignore[misc]
     def bench() -> None:
-        for grid in grids_to_eval:
-            rule(grid)
+        # Benchmark the time taken to create a mask generator for completeness
+        rule(grid)
+
+        # And then call the mask generator N times
+        for mask_gen in mask_generators:
+            mask_gen()
