@@ -67,9 +67,6 @@ def test_rules(
     rule: Callable[..., Mask],
 ) -> None:
     """Test/benchmark each individual rule."""
-    height = 64
-    limit = 100
-
     grid = RainingGrid(height)
 
     # Discard the first H frames so all rules are effective (e.g. splashing)
