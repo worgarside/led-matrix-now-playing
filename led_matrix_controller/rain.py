@@ -63,22 +63,26 @@ class RainingGrid(Grid):
     @Grid.rule(State.NULL)
     def top_of_rain_down(self, _: TargetSlice) -> MaskGen:
         """Move the top of a raindrop down."""
-        middle_slice = self._grid[slice(1, -1), slice(None)]
         above_slice = self._grid[slice(None, -2), slice(None)]
+        middle_slice = self._grid[slice(1, -1), slice(None)]
         below_slice = self._grid[slice(2, None), slice(None)]
+        top_row = self._grid[0]
+        second_row = self._grid[1]
+        penultimate_row = self._grid[-2]
+        last_row = self._grid[-1]
+
+        raindrop = State.RAINDROP.state
 
         def _mask() -> Mask:
             return np.vstack(
                 (
-                    (self._grid[0] == State.RAINDROP.state)
-                    & (self._grid[1] == State.RAINDROP.state),
+                    (top_row == raindrop) & (second_row == raindrop),
                     (
-                        (middle_slice == State.RAINDROP.state)
-                        & (below_slice == State.RAINDROP.state)
-                        & (above_slice != State.RAINDROP.state)
+                        (above_slice != raindrop)
+                        & (middle_slice == raindrop)
+                        & (below_slice == raindrop)
                     ),
-                    (self._grid[-1] == State.RAINDROP.state)
-                    & (self._grid[-2] != State.RAINDROP.state),
+                    (last_row == raindrop) & (penultimate_row != raindrop),
                 )
             )
 
