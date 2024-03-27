@@ -127,6 +127,8 @@ class Grid:
             for target_slice, mask, state in updates:
                 self._grid[target_slice][mask] = state.value
 
+            self.frame_index += 1
+
             yield self._grid
 
     @property
