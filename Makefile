@@ -6,7 +6,7 @@ clean:
 	sudo rm -rf rpi-rgb-led-matrix
 
 create:
-	virtualenv -p 3.11 .venv
+	virtualenv -p 3.12 .venv312
 	$(MAKE) install-all
 
 	sudo mkdir -p /var/cache/led-matrix-controller
@@ -15,8 +15,8 @@ create:
 
 	git clone https://github.com/hzeller/rpi-rgb-led-matrix.git
 
-	$(MAKE) -C rpi-rgb-led-matrix/bindings/python build-python PYTHON=/home/pi/led-matrix-controller/.venv/bin/python
-	$(MAKE) -C rpi-rgb-led-matrix/bindings/python install-python PYTHON=/home/pi/led-matrix-controller/.venv/bin/python
+	$(MAKE) -C rpi-rgb-led-matrix/bindings/python build-python PYTHON=/home/pi/led-matrix-controller/.venv312/bin/python
+	$(MAKE) -C rpi-rgb-led-matrix/bindings/python install-python PYTHON=/home/pi/led-matrix-controller/.venv312/bin/python
 
 	sudo rm -rf rpi-rgb-led-matrix
 
@@ -27,7 +27,7 @@ enable:
 	sudo systemctl enable led_matrix_controller.service
 
 install-python:
-	.venv/bin/pip install -r requirements.txt
+	.venv312/bin/pip install -r requirements.txt
 
 install-service:
 	sudo cp service/led_matrix_controller.service /etc/systemd/system/
@@ -41,7 +41,7 @@ restart:
 	sudo systemctl restart led_matrix_controller.service
 
 run:
-	sudo .venv/bin/python src/application/controller/led_matrix_controller.py
+	sudo .venv312/bin/python src/application/controller/led_matrix_controller.py
 
 start:
 	sudo systemctl start led_matrix_controller.service

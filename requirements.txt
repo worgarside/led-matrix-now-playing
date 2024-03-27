@@ -1,7 +1,7 @@
-certifi==2024.2.2 ; python_version >= "3.11" and python_version < "3.12" \
+certifi==2024.2.2 ; python_version >= "3.11" and python_version < "3.13" \
     --hash=sha256:0569859f95fc761b18b45ef421b1290a0f65f147e92a1e5eb3e635f9a5e4e66f \
     --hash=sha256:dc383c07b76109f368f6106eee2b593b04a011ea4d55f652c6ca24a754d1cdd1
-charset-normalizer==3.3.2 ; python_version >= "3.11" and python_version < "3.12" \
+charset-normalizer==3.3.2 ; python_version >= "3.11" and python_version < "3.13" \
     --hash=sha256:06435b539f889b1f6f4ac1758871aae42dc3a8c0e24ac9e60c2384973ad73027 \
     --hash=sha256:06a81e93cd441c56a9b65d8e1d043daeb97a3d0856d177d5c90ba85acb3db087 \
     --hash=sha256:0a55554a2fa0d408816b3b5cedf0045f4b8e1a6065aec45849de2d6f3f8e9786 \
@@ -92,10 +92,10 @@ charset-normalizer==3.3.2 ; python_version >= "3.11" and python_version < "3.12"
     --hash=sha256:fb69256e180cb6c8a894fee62b3afebae785babc1ee98b81cdf68bbca1987f33 \
     --hash=sha256:fd1abc0d89e30cc4e02e4064dc67fcc51bd941eb395c502aac3ec19fab46b519 \
     --hash=sha256:ff8fa367d09b717b2a17a052544193ad76cd49979c805768879cb63d9ca50561
-idna==3.6 ; python_version >= "3.11" and python_version < "3.12" \
+idna==3.6 ; python_version >= "3.11" and python_version < "3.13" \
     --hash=sha256:9ecdbbd083b06798ae1e86adcbfe8ab1479cf864e4ee30fe4e46a003d12491ca \
     --hash=sha256:c05567e9c24a6b9faaa835c4821bad0590fbb9d5779e7caa6e1cc4978e7eb24f
-numpy==1.26.4 ; python_version >= "3.11" and python_version < "3.12" \
+numpy==1.26.4 ; python_version >= "3.11" and python_version < "3.13" \
     --hash=sha256:03a8c78d01d9781b28a6989f6fa1bb2c4f2d51201cf99d3dd875df6fbd96b23b \
     --hash=sha256:08beddf13648eb95f8d867350f6a018a4be2e5ad54c8d8caed89ebca558b2818 \
     --hash=sha256:1af303d6b2210eb850fcf03064d364652b7120803a0b872f5211f5234b399f20 \
@@ -132,9 +132,9 @@ numpy==1.26.4 ; python_version >= "3.11" and python_version < "3.12" \
     --hash=sha256:edd8b5fe47dab091176d21bb6de568acdd906d1887a4584a15a9a96a1dca06ef \
     --hash=sha256:f870204a840a60da0b12273ef34f7051e98c3b5961b61b0c2c1be6dfd64fbcd3 \
     --hash=sha256:ffa75af20b44f8dba823498024771d5ac50620e6915abac414251bd971b4529f
-paho-mqtt==1.6.1 ; python_version >= "3.11" and python_version < "3.12" \
+paho-mqtt==1.6.1 ; python_version >= "3.11" and python_version < "3.13" \
     --hash=sha256:2a8291c81623aec00372b5a85558a372c747cbca8e9934dfe218638b8eefc26f
-pillow==10.2.0 ; python_version >= "3.11" and python_version < "3.12" \
+pillow==10.2.0 ; python_version >= "3.11" and python_version < "3.13" \
     --hash=sha256:0304004f8067386b477d20a518b50f3fa658a28d44e4116970abfcd94fac34a8 \
     --hash=sha256:0689b5a8c5288bc0504d9fcee48f61a6a586b9b98514d7d29b840143d6734f39 \
     --hash=sha256:0eae2073305f451d8ecacb5474997c08569fb4eb4ac231ffa4ad7d342fdc25ac \
@@ -203,12 +203,12 @@ pillow==10.2.0 ; python_version >= "3.11" and python_version < "3.12" \
     --hash=sha256:edca80cbfb2b68d7b56930b84a0e45ae1694aeba0541f798e908a49d66b837f1 \
     --hash=sha256:f379abd2f1e3dddb2b61bc67977a6b5a0a3f7485538bcc6f39ec76163891ee48 \
     --hash=sha256:fe4c15f6c9285dc54ce6553a3ce908ed37c8f3825b5a51a15c91442bb955b868
-requests==2.31.0 ; python_version >= "3.11" and python_version < "3.12" \
+requests==2.31.0 ; python_version >= "3.11" and python_version < "3.13" \
     --hash=sha256:58cd2187c01e70e6e26505bca751777aa9f2ee0b7f4300988b709f44e013003f \
     --hash=sha256:942c5a758f98d790eaed1a29cb6eefc7ffb0d1cf7af05c3d2791656dbd6ad1e1
-urllib3==2.0.7 ; python_version >= "3.11" and python_version < "3.12" \
+urllib3==2.0.7 ; python_version >= "3.11" and python_version < "3.13" \
     --hash=sha256:c97dfde1f7bd43a71c8d2a58e369e9b2bf692d1334ea9f9cae55add7d0dd0f84 \
     --hash=sha256:fdb6d215c776278489906c2f8916e6e7d4f5a9b602ccbcfdf7f016fc8da0596e
-wg-utilities[exceptions]==5.14.1 ; python_version >= "3.11" and python_version < "3.12" \
+wg-utilities[exceptions]==5.14.1 ; python_version >= "3.11" and python_version < "3.13" \
     --hash=sha256:7962284148660faba688c68a1276143a7d993ddd09bd082f42321fc96c69e99d \
     --hash=sha256:7d1fa5628ef564bda9d03653080f670d8c48cd49f12d489a7e3c499233db7a9e
