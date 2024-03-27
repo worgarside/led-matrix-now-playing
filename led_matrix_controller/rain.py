@@ -178,14 +178,22 @@ class Matrix:
         self.canvas.SetImage(image)
         self.canvas = self.matrix.SwapOnVSync(self.canvas)
 
+    @property
+    def height(self) -> int:
+        """Return the height of the matrix."""
+        return int(self.matrix.height)
+
+    @property
+    def width(self) -> int:
+        """Return the width of the matrix."""
+        return int(self.matrix.width)
+
 
 def main() -> None:
     """Run the rain simulation."""
     matrix = Matrix()
 
-    size = 64
-
-    grid = RainingGrid(size)
+    grid = RainingGrid(height=matrix.height, width=matrix.width)
 
     for frame in grid.frames:
         matrix.render_array(frame)

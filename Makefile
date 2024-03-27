@@ -41,7 +41,7 @@ restart:
 	sudo systemctl restart led_matrix_controller.service
 
 run:
-	sudo .venv/bin/python src/application/controller/led_matrix_controller.py
+	sudo .venv/bin/python led_matrix_controller/application/controller/led_matrix_controller.py
 
 start:
 	sudo systemctl start led_matrix_controller.service
