@@ -30,7 +30,12 @@ class StateBase(Enum):
         _BY_VALUE[value] = self
 
     @classmethod
-    def by_value(cls, value: int | np.int_) -> StateBase:
+    def colormap(cls) -> NDArray[np.int_]:
+        """Return the color map of the states."""
+        return np.array([state.color for state in cls])
+
+    @staticmethod
+    def by_value(value: int | np.int_) -> StateBase:
         """Return the state by its value."""
         return _BY_VALUE[int(value)]
 
