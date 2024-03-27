@@ -50,7 +50,7 @@ def test_raining_grid_simulation(
             height,
             limit,
             rule,
-            id=f"`{rule.__name__}` for {limit} frame{'s' if limit > 1 else ''} @ {height}x{height}",
+            id=f"{rule.__name__} for {limit} frame{'s' if limit > 1 else ''} @ {height}x{height}",
             marks=pytest.mark.xdist_group(f"{height}-{limit}-{rule.__name__}"),
         )
         for height, limit, rule in product(
@@ -73,7 +73,15 @@ def test_rules(
     for _ in islice(grid.frames, height + 10):
         pass
 
+    expected_frame_index = height + 9
+    assert grid.frame_index == expected_frame_index
+    expected_frame_index += 1
+
     grids_to_eval = [deepcopy(grid) for _ in islice(grid.frames, limit)]
+
+    for g in grids_to_eval:
+        assert g.frame_index == expected_frame_index
+        expected_frame_index += 1
 
     @benchmark  # type: ignore[misc]
     def bench() -> None:

@@ -56,7 +56,7 @@ class Grid:
     height: int
     width: int = -1
 
-    frame_index: int = 0
+    frame_index: int = -1
 
     _RULES: ClassVar[list[tuple[TargetSliceDecVal, Callable[..., Mask], StateBase]]] = []
     _RULE_METHODS: ClassVar[list[Callable[..., Mask]]] = []
