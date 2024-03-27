@@ -56,9 +56,10 @@ class Grid:
     height: int
     width: int = -1
 
-    frame_index: int = 0
+    frame_index: int = -1
 
     _RULES: ClassVar[list[tuple[TargetSliceDecVal, Callable[..., Mask], StateBase]]] = []
+    _RULE_METHODS: ClassVar[list[Callable[..., Mask]]] = []
 
     Rule: ClassVar = Callable[[Self], Mask]
 
@@ -98,6 +99,7 @@ class Grid:
                     return func(self)
 
             cls._RULES.append((target_slice, wrapper, to_state))
+            cls._RULE_METHODS.append(wrapper)
             return wrapper
 
         return decorator
