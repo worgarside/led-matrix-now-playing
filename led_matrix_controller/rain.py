@@ -230,7 +230,8 @@ class Matrix:
 
         image = Image.fromarray(pixels.astype("uint8"), "RGB")
 
-        self.matrix.SetImage(image)
+        self.canvas.SetImage(image)
+        self.canvas = self.matrix.SwapOnVSync(self.canvas)
 
     @property
     def height(self) -> int:
