@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from enum import unique
+from time import sleep
 from typing import TYPE_CHECKING, ClassVar, Literal
 
 import numpy as np
@@ -54,7 +55,9 @@ class RainingGrid(Grid):
         upper_slice = self[self.translate_slice(target_slice, vrt=Direction.UP)]
 
         def _mask() -> Mask:
-            return (upper_slice == State.RAINDROP) & (lower_slice == State.NULL)  # type: ignore[no-any-return]
+            return (upper_slice == State.RAINDROP.state) & (  # type: ignore[no-any-return]
+                lower_slice == State.NULL.state
+            )
 
         return _mask
 
@@ -68,13 +71,14 @@ class RainingGrid(Grid):
         def _mask() -> Mask:
             return np.vstack(
                 (
-                    (self[0] == State.RAINDROP) & (self[1] == State.RAINDROP),
+                    (self[0] == State.RAINDROP.state) & (self[1] == State.RAINDROP.state),
                     (
-                        (middle_slice == State.RAINDROP)
-                        & (below_slice == State.RAINDROP)
-                        & (above_slice != State.RAINDROP)
+                        (middle_slice == State.RAINDROP.state)
+                        & (below_slice == State.RAINDROP.state)
+                        & (above_slice != State.RAINDROP.state)
                     ),
-                    (self[-1] == State.RAINDROP) & (self[-2] != State.RAINDROP),
+                    (self[-1] == State.RAINDROP.state)
+                    & (self[-2] != State.RAINDROP.state),
                 )
             )
 
@@ -99,9 +103,9 @@ class RainingGrid(Grid):
 
         def _mask() -> Mask:
             return (  # type: ignore[no-any-return]
-                (source_slice == State.RAINDROP)
-                & (splash_spots == State.NULL)
-                & (below_slice == State.NULL)
+                (source_slice == State.RAINDROP.state)
+                & (splash_spots == State.NULL.state)
+                & (below_slice == State.NULL.state)
             )
 
         return _mask
@@ -133,7 +137,7 @@ class RainingGrid(Grid):
 
         def _mask() -> Mask:
             return (  # type: ignore[no-any-return]
-                source_slice == splash_state
+                source_slice == splash_state.state
             )  # & self[target_slice] will be NULL
 
         return _mask
@@ -188,7 +192,7 @@ class RainingGrid(Grid):
         source_slice = self[self.translate_slice(target_slice, vrt=Direction.UP)]
 
         def _mask() -> Mask:
-            return source_slice == State.SPLASHDROP  # type: ignore[no-any-return]
+            return source_slice == State.SPLASHDROP.state  # type: ignore[no-any-return]
             # & self[target_slice] will be State.NULL
 
         return _mask
@@ -240,6 +244,7 @@ def main() -> None:
 
     for frame in grid.frames:
         matrix.render_array(frame)
+        sleep(0.01)
 
 
 if __name__ == "__main__":
