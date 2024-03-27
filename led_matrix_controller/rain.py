@@ -176,7 +176,7 @@ class Matrix:
         image = Image.fromarray(pixels.astype("uint8"), "RGB")
 
         self.canvas.SetImage(image)
-        self.canvas = self.matrix.SwapOnVSync(self.canvas, framerate_fraction=5)
+        self.canvas = self.matrix.SwapOnVSync(self.canvas)
 
 
 def main() -> None:
