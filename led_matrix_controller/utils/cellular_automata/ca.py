@@ -66,9 +66,10 @@ class Grid:
     height: int
     width: int
 
-    frame_index: int = 0
+    frame_index: int = -1
 
     _RULES: ClassVar[list[tuple[TargetSlice, Callable[..., MaskGen], StateBase]]] = []
+    _RULE_METHODS: ClassVar[list[Callable[..., MaskGen]]] = []
 
     Rule: ClassVar = Callable[[Self], MaskGen]
 
@@ -127,6 +128,7 @@ class Grid:
                 return rule_func(grid, actual_slice)
 
             cls._RULES.append((actual_slice, rule_func, to_state))
+            cls._RULE_METHODS.append(wrapper)
 
             return wrapper
 
