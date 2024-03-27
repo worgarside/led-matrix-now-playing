@@ -61,6 +61,7 @@ class StateBase(Enum):
 TargetSliceDecVal = slice | int | tuple[int | slice, int | slice]
 TargetSlice = tuple[slice, slice]
 Mask = NDArray[np.bool_]
+MaskGen = Callable[[], Mask]
 
 
 @dataclass
@@ -72,9 +73,9 @@ class Grid:
 
     frame_index: int = 0
 
-    _RULES: ClassVar[list[tuple[TargetSliceDecVal, Callable[..., Mask], StateBase]]] = []
+    _RULES: ClassVar[list[tuple[TargetSlice, Callable[..., MaskGen], StateBase]]] = []
 
-    Rule: ClassVar = Callable[[Self], Mask]
+    Rule: ClassVar = Callable[[Self], MaskGen]
 
     class OutOfBoundsError(ValueError):
         """Error for when a slice goes out of bounds."""
@@ -98,7 +99,7 @@ class Grid:
         to_state: StateBase,
         *,
         target_slice: TargetSliceDecVal = EVERYWHERE,
-    ) -> Callable[[Callable[[Any, TargetSlice], Mask]], Callable[..., Mask]]:
+    ) -> Callable[[Callable[[Any, TargetSlice], MaskGen]], Callable[..., MaskGen]]:
         """Decorator to add a rule to the grid.
 
         Args:
@@ -125,12 +126,12 @@ class Grid:
             case _:
                 raise ValueError(f"Invalid target_slice: {target_slice}")
 
-        def decorator(func: Callable[[Grid, TargetSlice], Mask]) -> Grid.Rule:
-            @wraps(func)
-            def wrapper(grid: Grid) -> Mask:
-                return func(grid, actual_slice)
+        def decorator(rule_func: Callable[[Grid, TargetSlice], MaskGen]) -> Grid.Rule:
+            @wraps(rule_func)
+            def wrapper(grid: Grid) -> MaskGen:
+                return rule_func(grid, actual_slice)
 
-            cls._RULES.append((actual_slice, wrapper, to_state))
+            cls._RULES.append((actual_slice, rule_func, to_state))
 
             return wrapper
 
@@ -151,13 +152,15 @@ class Grid:
     @property
     def frames(self) -> Generator[NDArray[np.int_], None, None]:
         """Generate the frames of the grid."""
-        while True:
-            updates = []
-            for target_slice, rule, to_state in self._RULES:
-                updates.append((target_slice, rule(self), to_state))
 
-            for target_slice, mask, state in updates:
-                self._grid[target_slice][mask] = state.value
+        updates = []
+        for target_slice, rule, to_state in self._RULES:
+            mask_generator = rule(self, target_slice)
+            updates.append((target_slice, mask_generator, to_state.value))
+
+        while True:
+            for target_slice, mask_generator, state in updates:
+                self._grid[target_slice][mask_generator()] = state
 
             yield self._grid
 

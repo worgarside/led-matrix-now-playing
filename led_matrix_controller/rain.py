@@ -3,13 +3,19 @@
 from __future__ import annotations
 
 from enum import unique
-from functools import lru_cache
 from typing import TYPE_CHECKING, ClassVar, Literal
 
 import numpy as np
 from models import RGBMatrix, RGBMatrixOptions
 from utils import const
-from utils.cellular_automata.ca import Direction, Grid, Mask, StateBase, TargetSlice
+from utils.cellular_automata.ca import (
+    Direction,
+    Grid,
+    Mask,
+    MaskGen,
+    StateBase,
+    TargetSlice,
+)
 
 if TYPE_CHECKING:
     from models.matrix import LedMatrixOptionsInfo
@@ -26,64 +32,65 @@ class State(StateBase):
     SPLASH_LEFT = 3, "*", (170, 197, 250)
     SPLASH_RIGHT = 4, "*", (170, 197, 250)
 
-    @lru_cache(maxsize=1)
-    @staticmethod
-    def active_splashes() -> tuple[int, int]:
-        """Return the active splash states."""
-        return State.SPLASH_LEFT.state, State.SPLASH_RIGHT.state
-
-    @lru_cache(maxsize=1)
-    @staticmethod
-    def any_splash() -> tuple[int, int, int]:
-        """Return any splash state."""
-        return State.SPLASH_LEFT.state, State.SPLASH_RIGHT.state, State.SPLASHDROP.state
-
 
 class RainingGrid(Grid):
     """Basic rain simulation."""
 
     @Grid.rule(State.RAINDROP, target_slice=0)
-    def generate_raindrops(self, target_slice: TargetSlice) -> Mask:
+    def generate_raindrops(self, target_slice: TargetSlice) -> MaskGen:
         """Generate raindrops at the top of the grid."""
-        return const.RNG.random(self[*target_slice].shape) < 0.025  # noqa: PLR2004
+        shape = self[target_slice].shape
+
+        def _mask() -> Mask:
+            return const.RNG.random(shape) < 0.025  # noqa: PLR2004
+
+        return _mask
 
     @Grid.rule(State.RAINDROP, target_slice=(slice(1, None), slice(None)))
-    def move_rain_down(self, target_slice: TargetSlice) -> Mask:
+    def move_rain_down(self, target_slice: TargetSlice) -> MaskGen:
         """Move raindrops down one cell."""
         lower_slice = self[target_slice]
         upper_slice = self[self.translate_slice(target_slice, vrt=Direction.UP)]
 
-        return (upper_slice == State.RAINDROP) & (lower_slice == State.NULL)  # type: ignore[no-any-return]
+        def _mask() -> Mask:
+            return (upper_slice == State.RAINDROP) & (lower_slice == State.NULL)  # type: ignore[no-any-return]
+
+        return _mask
 
     @Grid.rule(State.NULL)
-    def top_of_rain_down(self, _: TargetSlice) -> Mask:
+    def top_of_rain_down(self, _: TargetSlice) -> MaskGen:
         """Move the top of a raindrop down."""
         middle_slice = self[slice(1, -1), slice(None)]
         above_slice = self[slice(None, -2), slice(None)]
         below_slice = self[slice(2, None), slice(None)]
 
-        return np.vstack(
-            (
-                (self[0] == State.RAINDROP) & (self[1] == State.RAINDROP),
+        def _mask() -> Mask:
+            return np.vstack(
                 (
-                    (middle_slice == State.RAINDROP)
-                    & (below_slice == State.RAINDROP)
-                    & (above_slice != State.RAINDROP)
-                ),
-                (self[-1] == State.RAINDROP) & (self[-2] != State.RAINDROP),
+                    (self[0] == State.RAINDROP) & (self[1] == State.RAINDROP),
+                    (
+                        (middle_slice == State.RAINDROP)
+                        & (below_slice == State.RAINDROP)
+                        & (above_slice != State.RAINDROP)
+                    ),
+                    (self[-1] == State.RAINDROP) & (self[-2] != State.RAINDROP),
+                )
             )
-        )
+
+        return _mask
 
     def _splash(
         self,
         target_slice: TargetSlice,
         *,
         source_slice_direction: Literal[Direction.LEFT, Direction.RIGHT],
-    ) -> Mask:
+    ) -> MaskGen:
         # TODO this would be better as "will be NULL", instead of "is NULL"
         source_slice = self[
             self.translate_slice(
-                target_slice, vrt=Direction.DOWN, hrz=source_slice_direction
+                target_slice,
+                vrt=Direction.DOWN,
+                hrz=source_slice_direction,
             )
         ]
         splashing = source_slice == State.RAINDROP
@@ -92,15 +99,18 @@ class RainingGrid(Grid):
             self[self.translate_slice(target_slice, vrt=Direction.DOWN)] == State.NULL
         )
 
-        return splashing & free_splash_spots & clear_below  # type: ignore[no-any-return]
+        def _mask() -> Mask:
+            return splashing & free_splash_spots & clear_below  # type: ignore[no-any-return]
+
+        return _mask
 
     @Grid.rule(State.SPLASH_LEFT, target_slice=(-2, slice(None, -1)))
-    def splash_left(self, target_slice: TargetSlice) -> Mask:
+    def splash_left(self, target_slice: TargetSlice) -> MaskGen:
         """Create a splash to the left."""
         return self._splash(target_slice, source_slice_direction=Direction.RIGHT)
 
     @Grid.rule(State.SPLASH_RIGHT, target_slice=(-2, slice(1, None)))
-    def splash_right(self, target_slice: TargetSlice) -> Mask:
+    def splash_right(self, target_slice: TargetSlice) -> MaskGen:
         """Create a splash to the right."""
         return self._splash(target_slice, source_slice_direction=Direction.LEFT)
 
@@ -110,7 +120,7 @@ class RainingGrid(Grid):
         *,
         splash_state: State,
         source_slice_direction: Literal[Direction.LEFT, Direction.RIGHT],
-    ) -> Mask:
+    ) -> MaskGen:
         source_slice = self[
             self.translate_slice(
                 target_slice,
@@ -119,12 +129,15 @@ class RainingGrid(Grid):
             )
         ]
 
-        return (  # type: ignore[no-any-return]
-            source_slice == splash_state
-        )  # & self[target_slice] will be NULL
+        def _mask() -> Mask:
+            return (  # type: ignore[no-any-return]
+                source_slice == splash_state
+            )  # & self[target_slice] will be NULL
+
+        return _mask
 
     @Grid.rule(State.SPLASH_LEFT, target_slice=(-3, slice(None, -1)))
-    def splash_left_high(self, target_slice: TargetSlice) -> Mask:
+    def splash_left_high(self, target_slice: TargetSlice) -> MaskGen:
         """Continue the splash to the left."""
         return self._splash_high(
             target_slice,
@@ -133,7 +146,7 @@ class RainingGrid(Grid):
         )
 
     @Grid.rule(State.SPLASH_RIGHT, target_slice=(-3, slice(1, None)))
-    def splash_right_high(self, target_slice: TargetSlice) -> Mask:
+    def splash_right_high(self, target_slice: TargetSlice) -> MaskGen:
         """Continue the splash to the right."""
         return self._splash_high(
             target_slice,
@@ -142,22 +155,41 @@ class RainingGrid(Grid):
         )
 
     @Grid.rule(State.NULL, target_slice=(slice(-3, None), slice(None)))
-    def remove_splashes(self, target_slice: TargetSlice) -> Mask:
+    def remove_splashes(self, target_slice: TargetSlice) -> MaskGen:
         """Remove any splashes - they only last one frame."""
-        return np.isin(self[target_slice], State.any_splash())
+        any_splash = (
+            State.SPLASH_LEFT.state,
+            State.SPLASH_RIGHT.state,
+            State.SPLASHDROP.state,
+        )
+        view = self[target_slice]
+
+        def _mask() -> Mask:
+            return np.isin(view, any_splash)
+
+        return _mask
 
     @Grid.rule(State.SPLASHDROP, target_slice=-3)
-    def create_splashdrop(self, target_slice: TargetSlice) -> Mask:
+    def create_splashdrop(self, target_slice: TargetSlice) -> MaskGen:
         """Convert a splash to a splashdrop."""
-        return np.isin(self[target_slice], State.active_splashes())
+        active_splashes = State.SPLASH_LEFT.state, State.SPLASH_RIGHT.state
+        view = self[target_slice]
+
+        def _mask() -> Mask:
+            return np.isin(view, active_splashes)
+
+        return _mask
 
     @Grid.rule(State.SPLASHDROP, target_slice=(slice(-3, None)))
-    def move_splashdrop_down(self, target_slice: TargetSlice) -> Mask:
+    def move_splashdrop_down(self, target_slice: TargetSlice) -> MaskGen:
         """Move the splashdrop down."""
         source_slice = self[self.translate_slice(target_slice, vrt=Direction.UP)]
 
-        return source_slice == State.SPLASHDROP  # type: ignore[no-any-return]
-        # & self[target_slice] will be State.NULL
+        def _mask() -> Mask:
+            return source_slice == State.SPLASHDROP  # type: ignore[no-any-return]
+            # & self[target_slice] will be State.NULL
+
+        return _mask
 
 
 class Matrix:
