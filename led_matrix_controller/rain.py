@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, ClassVar, Literal
 
 import numpy as np
 from models import RGBMatrix, RGBMatrixOptions
+from PIL import Image
 from utils import const
 from utils.cellular_automata.ca import (
     Direction,
@@ -207,6 +208,8 @@ class Matrix:
         "show_refresh_rate": False,
     }
 
+    COLORMAP: NDArray[np.int_] = State.colormap()
+
     def __init__(self) -> None:
         options = RGBMatrixOptions()
 
@@ -219,10 +222,12 @@ class Matrix:
 
     def render_array(self, array: NDArray[np.int_]) -> None:
         """Render the array to the LED matrix."""
-        for (y, x), state in np.ndenumerate(array):
-            self.canvas.SetPixel(x, y, *State.by_value(state).color)
 
-        self.matrix.SwapOnVSync(self.canvas)
+        pixels = self.COLORMAP[array]
+
+        image = Image.fromarray(pixels.astype("uint8"), "RGB")
+
+        self.matrix.SetImage(image)
 
 
 def main() -> None:
