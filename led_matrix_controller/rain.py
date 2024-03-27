@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from enum import unique
-from time import sleep
 from typing import TYPE_CHECKING, ClassVar, Literal
 
 import numpy as np
@@ -244,7 +243,6 @@ def main() -> None:
 
     for frame in grid.frames:
         matrix.render_array(frame)
-        sleep(0.01)
 
 
 if __name__ == "__main__":
