@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum, IntEnum
-from functools import wraps
+from functools import lru_cache, wraps
 from itertools import islice
 from typing import Any, Callable, ClassVar, Generator, Self
 
@@ -166,6 +166,7 @@ class Grid:
         """Return a string representation of the grid."""
         return "\n".join(" ".join(state.char for state in row) for row in self._grid)
 
+    @lru_cache
     @staticmethod
     def _translate_slice_start(
         *, current: int | None, delta: int, size: int
@@ -204,6 +205,7 @@ class Grid:
 
         return new_value
 
+    @lru_cache
     @staticmethod
     def _translate_slice_stop(
         *, current: int | None, delta: int, size: int
@@ -262,19 +264,29 @@ class Grid:
 
         return (
             slice(
-                self._translate_slice_start(
-                    current=rows.start, delta=vrt, size=self.height
+                Grid._translate_slice_start(
+                    current=rows.start,
+                    delta=vrt,
+                    size=self.height,
                 ),
-                self._translate_slice_stop(
-                    current=rows.stop, delta=vrt, size=self.height
+                Grid._translate_slice_stop(
+                    current=rows.stop,
+                    delta=vrt,
+                    size=self.height,
                 ),
                 rows.step,
             ),
             slice(
-                self._translate_slice_start(
-                    current=cols.start, delta=hrz, size=self.width
+                Grid._translate_slice_start(
+                    current=cols.start,
+                    delta=hrz,
+                    size=self.width,
                 ),
-                self._translate_slice_stop(current=cols.stop, delta=hrz, size=self.width),
+                Grid._translate_slice_stop(
+                    current=cols.stop,
+                    delta=hrz,
+                    size=self.width,
+                ),
                 cols.step,
             ),
         )
