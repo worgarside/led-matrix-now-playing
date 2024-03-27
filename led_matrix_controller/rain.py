@@ -93,14 +93,15 @@ class RainingGrid(Grid):
                 hrz=source_slice_direction,
             )
         ]
-        splashing = source_slice == State.RAINDROP
-        free_splash_spots = self[target_slice] == State.NULL
-        clear_below = (
-            self[self.translate_slice(target_slice, vrt=Direction.DOWN)] == State.NULL
-        )
+        splash_spots = self[target_slice]
+        below_slice = self[self.translate_slice(target_slice, vrt=Direction.DOWN)]
 
         def _mask() -> Mask:
-            return splashing & free_splash_spots & clear_below  # type: ignore[no-any-return]
+            return (  # type: ignore[no-any-return]
+                (source_slice == State.RAINDROP)
+                & (splash_spots == State.NULL)
+                & (below_slice == State.NULL)
+            )
 
         return _mask
 

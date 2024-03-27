@@ -159,8 +159,12 @@ class Grid:
             updates.append((target_slice, mask_generator, to_state.value))
 
         while True:
+            masks = []
             for target_slice, mask_generator, state in updates:
-                self._grid[target_slice][mask_generator()] = state
+                masks.append((target_slice, mask_generator(), state))
+
+            for target_slice, mask, state in masks:
+                self._grid[target_slice][mask] = state
 
             yield self._grid
 
